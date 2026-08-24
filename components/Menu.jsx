@@ -30,7 +30,7 @@ const menuItems = [
   { label: 'Login', icon: FileEdit, href: '/user/register' },
   { label: 'Brochure', icon: BookOpen, href: '#' },
   { label: 'Developers', icon: Code, href: '/developer' },
-  { label: 'Contact', icon: Contact, href: '#infos' },
+  { label: 'Contact', icon: Contact, href: '/contact' },
   { label: 'Events', icon: Calendar, href: '/events/register' },
   { label: 'Profile', icon: User, href: '/user/account' },
 ]

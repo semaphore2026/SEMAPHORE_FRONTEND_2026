@@ -75,17 +75,17 @@ export default function SetTeamCard({ user, onUserUpdate }) {
   };
 
   return (
-    <div className="w-full bg-white/40 backdrop-blur-xl border border-white/60 rounded-3xl p-6 shadow-sm mb-6">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-cyan-100/80 border border-cyan-300 flex items-center justify-center text-cyan-700 shrink-0">
+    <div className="w-full bg-black/40 backdrop-blur-xl border border-white/10 rounded-3xl p-6 shadow-sm mb-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          <div className="w-10 h-10 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shrink-0">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
             </svg>
           </div>
           <div>
-            <h3 className="text-lg font-extrabold text-cyan-950">Team Information</h3>
-            <p className="text-xs text-cyan-800/80 font-medium">
+            <h3 className="text-lg font-extrabold text-white">Team Information</h3>
+            <p className="text-xs text-gray-400 font-medium">
               {existingTeamName ? "Your assigned team for event registrations" : "Set your team name before making payments"}
             </p>
           </div>
@@ -94,7 +94,7 @@ export default function SetTeamCard({ user, onUserUpdate }) {
         {existingTeamName && !isEditing && (
           <button
             onClick={() => setIsEditing(true)}
-            className="text-xs font-bold text-cyan-700 hover:text-cyan-900 bg-cyan-100/70 hover:bg-cyan-200/80 px-3 py-1.5 rounded-xl transition-all border border-cyan-300/50"
+            className="text-xs font-bold text-cyan-400 hover:text-white bg-cyan-500/10 hover:bg-cyan-500/20 px-3 py-1.5 rounded-xl transition-all border border-cyan-500/30 self-start sm:self-auto"
           >
             Change Team
           </button>
@@ -102,29 +102,29 @@ export default function SetTeamCard({ user, onUserUpdate }) {
       </div>
 
       {error && (
-        <div className="mb-4 p-3.5 text-xs text-red-700 bg-red-100/70 backdrop-blur-sm border border-red-300 rounded-xl flex items-center gap-2.5">
+        <div className="mb-4 p-3.5 text-xs text-red-400 bg-red-500/10 backdrop-blur-sm border border-red-500/30 rounded-xl flex items-center gap-2.5">
           <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse shrink-0"></div>
           {error}
         </div>
       )}
 
       {success && (
-        <div className="mb-4 p-3.5 text-xs text-teal-800 bg-teal-100/70 backdrop-blur-sm border border-teal-300 rounded-xl flex items-center gap-2.5">
-          <div className="w-2 h-2 rounded-full bg-teal-500 animate-pulse shrink-0"></div>
+        <div className="mb-4 p-3.5 text-xs text-cyan-400 bg-cyan-500/10 backdrop-blur-sm border border-cyan-500/30 rounded-xl flex items-center gap-2.5">
+          <div className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse shrink-0"></div>
           {success}
         </div>
       )}
 
       {existingTeamName && !isEditing ? (
-        <div className="bg-white/50 border border-cyan-200/60 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <span className="text-xs font-semibold text-cyan-800 uppercase tracking-wider block mb-0.5">Active Team</span>
-            <span className="text-lg font-extrabold text-cyan-950">{existingTeamName}</span>
+            <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider block mb-0.5">Active Team</span>
+            <span className="text-lg font-extrabold text-white">{existingTeamName}</span>
           </div>
           {existingTeamId && (
-            <div className="bg-cyan-50 border border-cyan-200 px-3 py-1.5 rounded-xl self-start sm:self-auto">
-              <span className="text-[11px] font-bold text-cyan-700 uppercase tracking-wider block">Team Code</span>
-              <span className="text-xs font-mono font-bold text-teal-800">{existingTeamId}</span>
+            <div className="bg-cyan-500/10 border border-cyan-500/30 px-3 py-1.5 rounded-xl self-start sm:self-auto">
+              <span className="text-[11px] font-bold text-cyan-400 uppercase tracking-wider block">Team Code</span>
+              <span className="text-xs font-mono font-bold text-white">{existingTeamId}</span>
             </div>
           )}
         </div>
@@ -136,7 +136,7 @@ export default function SetTeamCard({ user, onUserUpdate }) {
               value={teamName}
               onChange={(e) => setTeamName(e.target.value)}
               placeholder="Enter Team Name (e.g. CyberKnights)"
-              className="w-full px-4 py-3 bg-white/70 hover:bg-white focus:bg-white border border-cyan-300/80 focus:border-cyan-500 rounded-xl text-sm font-medium text-cyan-950 focus:outline-none transition-all placeholder-cyan-800/40"
+              className="w-full px-4 py-3 bg-white/5 hover:bg-white/10 focus:bg-white/10 border border-white/10 focus:border-cyan-500/50 rounded-xl text-sm font-medium text-white focus:outline-none transition-all placeholder-gray-500"
               required
             />
           </div>
@@ -146,8 +146,8 @@ export default function SetTeamCard({ user, onUserUpdate }) {
               disabled={loading || !teamName.trim()}
               className={`px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-wider transition-all border shadow-sm ${
                 loading || !teamName.trim()
-                  ? "bg-cyan-800/30 text-cyan-900/40 border-transparent cursor-not-allowed"
-                  : "bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-500 hover:to-cyan-500 text-white border-teal-500/40 cursor-pointer"
+                  ? "bg-white/5 text-gray-500 border-white/10 cursor-not-allowed"
+                  : "bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-400 border-cyan-500/50 cursor-pointer"
               }`}
             >
               {loading ? "Saving..." : existingTeamName ? "Update Team" : "Set Team"}
@@ -159,7 +159,7 @@ export default function SetTeamCard({ user, onUserUpdate }) {
                   setIsEditing(false);
                   setError(null);
                 }}
-                className="px-4 py-3 rounded-xl font-bold text-xs uppercase tracking-wider text-cyan-800 hover:bg-white/50 border border-cyan-200 transition-all"
+                className="px-4 py-3 rounded-xl font-bold text-xs uppercase tracking-wider text-gray-400 hover:text-white hover:bg-white/10 border border-white/10 transition-all"
               >
                 Cancel
               </button>

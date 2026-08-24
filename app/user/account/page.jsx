@@ -7,6 +7,7 @@ import MyRegistration from '@/components/profile/MyRegistration';
 import SetTeamCard from '@/components/profile/SetTeamCard';
 import WaterWave from '@/components/WaterWaveWrapper';
 
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://13.201.89.79';
 
 export default function MyRegistrationPage() {
@@ -53,29 +54,29 @@ export default function MyRegistrationPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-cyan-100 via-blue-50 to-teal-50 flex items-center justify-center">
-        <p className="text-cyan-800 font-bold tracking-widest uppercase animate-pulse">Loading Dashboard...</p>
+      <main className="min-h-screen bg-black flex items-center justify-center">
+        <p className="text-cyan-400 font-bold tracking-widest uppercase animate-pulse">Loading Dashboard...</p>
       </main>
     );
   }
 
   if (error) {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-cyan-100 via-blue-50 to-teal-50 flex items-center justify-center p-4">
-        <div className="bg-white/40 backdrop-blur-xl p-8 rounded-3xl border border-white/60 text-center max-w-sm w-full shadow-lg">
-          <p className="text-red-600 font-bold mb-3">{error}</p>
-          <p className="text-cyan-800 font-medium text-sm">Redirecting to login...</p>
+      <main className="min-h-screen bg-black flex items-center justify-center p-4">
+        <div className="bg-black/40 backdrop-blur-xl p-8 rounded-3xl border border-white/10 text-center max-w-sm w-full shadow-lg">
+          <p className="text-red-500 font-bold mb-3">{error}</p>
+          <p className="text-cyan-400/80 font-medium text-sm">Redirecting to login...</p>
         </div>
       </main>
     );
   }
 
   return (
-    <main className="relative min-h-screen bg-gradient-to-br from-cyan-100 via-blue-200 to-teal-200 overflow-hidden py-12 px-4 sm:px-6 lg:px-8">
+    <main className="relative min-h-screen bg-black py-12 px-4 sm:px-6 lg:px-8">
       {/* Decorative noise/texture overlay for the background */}
-      <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.03] mix-blend-overlay pointer-events-none z-0"></div>
+      <div className="absolute inset-0 bg-[url('/noise.png')] opacity-10 mix-blend-overlay pointer-events-none z-0"></div>
 
-      {/* Water Wave Effect */}
+      {/* Water Wave Effect (Darkened via overlay) */}
       <div className="fixed inset-0 z-0 overflow-hidden pointer-events-auto">
         <WaterWave
           imageUrl="/water.jpg"
@@ -85,7 +86,7 @@ export default function MyRegistrationPage() {
           className="absolute inset-0 w-full h-full opacity-90 bg-cover bg-center"
           style={{ backgroundSize: 'cover', backgroundPosition: 'center' }}
         >
-          {() => <div className="w-full h-full" />}
+          {() => <div className="w-full h-full bg-black/80 pointer-events-none" />}
         </WaterWave>
       </div>
 

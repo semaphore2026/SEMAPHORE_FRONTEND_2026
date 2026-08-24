@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import PaymentSubmission from '@/components/payment/PaymentSubmission';
+import WaterWave from '@/components/WaterWaveWrapper';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://13.201.89.79';
 
@@ -42,34 +43,48 @@ export default function PaymentPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-cyan-100 via-blue-50 to-teal-50 flex items-center justify-center">
-        <p className="text-cyan-800 font-bold tracking-widest uppercase animate-pulse">Verifying Access...</p>
+      <main className="min-h-screen bg-black flex items-center justify-center">
+        <p className="text-cyan-400 font-bold tracking-widest uppercase animate-pulse">Verifying Access...</p>
       </main>
     );
   }
 
   if (error) {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-cyan-100 via-blue-50 to-teal-50 flex items-center justify-center p-4">
-        <div className="bg-white/40 backdrop-blur-xl p-8 rounded-3xl border border-white/60 text-center max-w-sm w-full shadow-lg">
-          <p className="text-red-600 font-bold mb-3">{error}</p>
-          <p className="text-cyan-800 font-medium text-sm">Redirecting to login...</p>
+      <main className="min-h-screen bg-black flex items-center justify-center p-4">
+        <div className="bg-black/40 backdrop-blur-xl p-8 rounded-3xl border border-red-500/50 text-center max-w-sm w-full shadow-lg">
+          <p className="text-red-400 font-bold mb-3">{error}</p>
+          <p className="text-gray-400 font-medium text-sm">Redirecting to login...</p>
         </div>
       </main>
     );
   }
 
   return (
-    <main className="relative min-h-screen bg-gradient-to-br from-cyan-100 via-blue-50 to-teal-50 overflow-hidden flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <main className="relative min-h-screen bg-black overflow-hidden flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       {/* Decorative noise/texture overlay for the background */}
-      <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.03] mix-blend-overlay pointer-events-none"></div>
+      <div className="absolute inset-0 bg-[url('/noise.png')] opacity-10 mix-blend-overlay pointer-events-none z-0"></div>
+
+      {/* Water Wave Effect (Darkened via overlay) */}
+      <div className="fixed inset-0 z-0 overflow-hidden pointer-events-auto">
+        <WaterWave
+          imageUrl="/water.jpg"
+          dropRadius={25}
+          perturbance={0.03}
+          resolution={512}
+          className="absolute inset-0 w-full h-full opacity-90 bg-cover bg-center"
+          style={{ backgroundSize: 'cover', backgroundPosition: 'center' }}
+        >
+          {() => <div className="w-full h-full bg-black/80 pointer-events-none" />}
+        </WaterWave>
+      </div>
       
       <div className="w-full max-w-6xl relative z-10 flex flex-col lg:flex-row items-stretch justify-center gap-8 lg:gap-12">
         {/* Left side: QR Code */}
-        <div className="flex-1 flex flex-col items-center justify-center bg-white/40 backdrop-blur-xl border border-white/60 rounded-3xl p-8 shadow-[0_8px_32px_rgba(0,100,150,0.15)]">
-          <h2 className="text-2xl font-extrabold text-cyan-950 mb-6 tracking-wide uppercase text-center">Scan to Pay</h2>
+        <div className="flex-1 flex flex-col items-center justify-center bg-black/40 backdrop-blur-xl border border-white/10 rounded-3xl p-8 shadow-sm">
+          <h2 className="text-2xl font-extrabold text-white mb-6 tracking-wide uppercase text-center">Scan to Pay</h2>
           
-          <div className="bg-white p-4 rounded-2xl shadow-sm border border-cyan-100 mb-6">
+          <div className="bg-white p-4 rounded-2xl shadow-sm border border-cyan-500/30 mb-6 relative group cursor-pointer transition-all hover:scale-105">
             <Image 
               src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=upi://pay?pa=semaphore@upi&pn=Semaphore&cu=INR" 
               alt="Payment QR Code" 
@@ -80,11 +95,11 @@ export default function PaymentPage() {
             />
           </div>
           
-          <div className="w-full bg-cyan-50/50 p-4 rounded-xl border border-cyan-200/50 text-center">
-              <p className="text-sm font-semibold text-cyan-900 uppercase tracking-wider mb-1">UPI ID</p>
-              <p className="text-lg font-bold text-teal-700 tracking-wider">semaphore@upi</p>
+          <div className="w-full bg-cyan-500/10 p-4 rounded-xl border border-cyan-500/30 text-center">
+              <p className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-1">UPI ID</p>
+              <p className="text-lg font-bold text-cyan-400 tracking-wider font-mono">semaphore@upi</p>
           </div>
-          <p className="text-sm text-cyan-800 font-medium text-center mt-6">
+          <p className="text-sm text-gray-400 font-medium text-center mt-6">
             Scan the QR code using any UPI app to pay for your registered events. After successful payment, enter the exact amount and the UTR transaction number in the form.
           </p>
         </div>
