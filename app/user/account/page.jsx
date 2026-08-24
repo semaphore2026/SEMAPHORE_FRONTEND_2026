@@ -1,4 +1,5 @@
 "use client";
+import Footer from "@/components/Footer";
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -96,6 +97,9 @@ export default function MyRegistrationPage() {
           <MyRegistration user={user} />
         </div>
       </div>
+      <div className="mt-12">
+  <Footer />
+</div>
     </main>
   );
 }
