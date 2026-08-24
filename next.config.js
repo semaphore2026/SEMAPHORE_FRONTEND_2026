@@ -4,6 +4,7 @@ const nextConfig = {
   compress: true,
   poweredByHeader: false,
   reactStrictMode: true,
+  allowedDevOrigins: ["10.79.163.249", "localhost:3000"],
 
   images: {
     unoptimized: true,
