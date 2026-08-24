@@ -1,0 +1,142 @@
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Cormorant Garamond', serif;
+  color: #2b2116;
+}
+
+.page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 16px;
+  background:
+    radial-gradient(ellipse at top left, rgba(255, 255, 255, 0.06), transparent 60%),
+    radial-gradient(ellipse at bottom right, rgba(0, 0, 0, 0.35), transparent 55%),
+    linear-gradient(135deg, #0d1f3d 0%, #0a1830 40%, #071224 70%, #050d1c 100%);
+}
+
+.scroll {
+  position: relative;
+  width: 100%;
+  max-width: 640px;
+  padding: 56px 48px 44px;
+  background:
+    radial-gradient(ellipse at 20% 10%, rgba(255, 255, 255, 0.55), transparent 55%),
+    linear-gradient(160deg, #eaf4fb 0%, #d9ecf7 45%, #c7e2f2 100%);
+  border: 1px solid #9dc3dd;
+  outline: 1px solid #b8d8ec;
+  outline-offset: -8px;
+  box-shadow:
+    0 2px 4px rgba(20, 60, 90, 0.2),
+    0 20px 45px rgba(5, 20, 40, 0.45),
+    inset 0 0 60px rgba(120, 175, 210, 0.2);
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 34px;
+}
+
+.title {
+  font-family: 'Cinzel Decorative', 'Cormorant Garamond', serif;
+  font-weight: 700;
+  font-size: 2.6rem;
+  letter-spacing: 0.02em;
+  margin: 0 0 20px;
+  color: #0d2a4a;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin: 0 auto 22px;
+  width: 78%;
+}
+
+.divider .line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #3a6a94, transparent);
+}
+
+.subtitle {
+  font-family: 'Cinzel', serif;
+  font-weight: 600;
+  font-size: 1.35rem;
+  letter-spacing: 0.06em;
+  color: #2f4d68;
+  margin: 0 0 8px;
+}
+
+.fest-tag {
+  margin: 0;
+  font-size: 1rem;
+  letter-spacing: 0.03em;
+  color: #3c6485;
+  font-style: italic;
+}
+
+.rules-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.rule-item {
+  display: flex;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(58, 106, 148, 0.25);
+  font-size: 1.08rem;
+  line-height: 1.5;
+}
+
+.rule-item:last-child {
+  border-bottom: none;
+}
+
+.rule-number {
+  font-family: 'Cinzel', serif;
+  font-weight: 600;
+  color: #1d4d73;
+  min-width: 26px;
+}
+
+.rule-text {
+  color: #16324a;
+}
+
+.footer {
+  margin-top: 30px;
+  text-align: center;
+  font-style: italic;
+  font-size: 0.95rem;
+  color: #3c6485;
+}
+
+@media (max-width: 560px) {
+  .scroll {
+    padding: 40px 24px 32px;
+  }
+  .title {
+    font-size: 2rem;
+  }
+  .subtitle {
+    font-size: 1.1rem;
+  }
+  .rule-item {
+    font-size: 1rem;
+  }
+}
