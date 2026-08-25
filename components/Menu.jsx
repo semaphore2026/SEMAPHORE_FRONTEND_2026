@@ -37,7 +37,7 @@ export default function Menu() {
       {/* Toggle Button */}
       <div className="fixed top-4 right-4 md:top-8 md:right-10 z-[110]">
         <div className="relative group">
-          <div className="absolute -inset-1.5 bg-cyan-400 rounded-2xl blur-md animate-pulse opacity-40 group-hover:opacity-75 transition duration-500 pointer-events-none"></div>
+          <div className="absolute -inset-1 bg-cyan-400 rounded-2xl blur-md animate-pulse opacity-20 group-hover:opacity-40 transition duration-500 pointer-events-none"></div>
           <Button
             variant="secondary"
             onClick={() => setIsOpen(!isOpen)}
