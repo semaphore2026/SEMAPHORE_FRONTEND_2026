@@ -6,6 +6,8 @@ import { EXRLoader } from "three/examples/jsm/loaders/EXRLoader.js";
 import { Water } from "three/examples/jsm/objects/Water.js";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import useSceneScroll from "@/hooks/useSceneScroll";
+import { buildSceneCameraTimeline } from "@/utils/sceneCameraTimeline";
 import Loader from "./Loader";
 
 import {
@@ -581,8 +583,10 @@ export default function Scene() {
   const [activeEvent, setActiveEvent] = useState("event-1");
 
   const [progress, setProgress] = useState(0);
-  const [scrollProgress, setScrollProgress] = useState(0);
   const [loading, setLoading] = useState(true);
+
+  const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+  const { scrollProgress, createScrollTimeline, cleanupScroll } = useSceneScroll({ isMobile });
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [hoveredNode, setHoveredNode] = useState(null);
@@ -682,9 +686,6 @@ export default function Scene() {
     const manager = new THREE.LoadingManager();
     manager.onProgress = (_url, itemsLoaded, itemsTotal) => {
       setProgress(Math.floor((itemsLoaded / itemsTotal) * 100));
-    };
-    manager.onLoad = () => {
-      setTimeout(() => setLoading(false), 500);
     };
 
     const isMobile = window.innerWidth < 768;
@@ -879,7 +880,7 @@ export default function Scene() {
 
     // --- LEFT & RIGHT JAGGED CLIFF WALLS ---
     const sideCliffGroup = new THREE.Group();
-    sideCliffGroup.visible = false;
+    sideCliffGroup.visible = true;
 
     const cliffWallMat = new THREE.MeshStandardMaterial({
       color: 0x051d2c,
@@ -969,12 +970,12 @@ export default function Scene() {
     });
     const caveMesh = new THREE.Mesh(caveGeometry, caveMaterial);
     caveMesh.position.set(0, -335, -380);
-    caveMesh.visible = false;
+    caveMesh.visible = true;
     scene.add(caveMesh);
 
     // Large Distant Underwater Mountains
     const bgMountainsGroup = new THREE.Group();
-    bgMountainsGroup.visible = false;
+    bgMountainsGroup.visible = true;
 
     const mountainMaterial = new THREE.MeshStandardMaterial({
       color: 0x031420,
@@ -1030,6 +1031,49 @@ export default function Scene() {
       roughness: 0.2,
       metalness: 0.4,
     });
+
+    // --- PRE-PORTAL FLOATING UNDERWATER PARTICLES & LUMINESCENT BUBBLES ---
+    const prePortalParticleCount = 600;
+    const prePortalParticleGeo = new THREE.BufferGeometry();
+    const prePortalParticlePos = new Float32Array(prePortalParticleCount * 3);
+
+    for (let i = 0; i < prePortalParticleCount; i++) {
+      prePortalParticlePos[i * 3] = (Math.random() - 0.5) * 110;
+      prePortalParticlePos[i * 3 + 1] = 10 - Math.random() * 135;
+      prePortalParticlePos[i * 3 + 2] = 20 - Math.random() * 220;
+    }
+
+    prePortalParticleGeo.setAttribute("position", new THREE.BufferAttribute(prePortalParticlePos, 3));
+
+    const prePortalParticleMat = new THREE.ShaderMaterial({
+      uniforms: { uTime: { value: 0 } },
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      vertexShader: `
+        uniform float uTime;
+        varying vec2 vUv;
+        void main() {
+          vec3 pos = position;
+          pos.y += sin(uTime * 0.4 + pos.x * 0.05) * 1.2;
+          pos.x += cos(uTime * 0.3 + pos.z * 0.05) * 0.8;
+          vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
+          gl_PointSize = (4.5 / -mvPosition.z);
+          gl_Position = projectionMatrix * mvPosition;
+        }
+      `,
+      fragmentShader: `
+        void main() {
+          float dist = length(gl_PointCoord - vec2(0.5));
+          if (dist > 0.5) discard;
+          float alpha = (1.0 - smoothstep(0.0, 0.5, dist)) * 0.55;
+          gl_FragColor = vec4(0.0, 0.94, 1.0, alpha);
+        }
+      `,
+    });
+
+    const prePortalParticles = new THREE.Points(prePortalParticleGeo, prePortalParticleMat);
+    scene.add(prePortalParticles);
 
     const portalGroup = new THREE.Group();
     portalGroup.position.set(0, -110, -190);
@@ -1334,6 +1378,15 @@ export default function Scene() {
 
     scene.add(portalGroup);
 
+    // Cache flat array of portal meshes once during setup to eliminate per-frame scene graph traversal
+    const cachedPortalMeshes = [];
+    portalGroup.traverse((child) => {
+      if (child.isMesh && child.material && child !== portalDisc) {
+        child.material.transparent = true;
+        cachedPortalMeshes.push(child);
+      }
+    });
+
     let dolphinMixer = null;
     let dolphinMesh = null;
     let dolphinSparkles = null;
@@ -1499,7 +1552,7 @@ export default function Scene() {
     // --- THE NEW WORLD BEYOND THE MAIN STARGATE: INVISIBLE UNTIL ENTERING STARGATE (z < -155) ---
     // Features 10 DISTINCT DESCENDING ROCK PLATFORMS, PORTALS & 3D EVENT BANNERS
     const newWorldGroup = new THREE.Group();
-    newWorldGroup.visible = false; // Strictly hidden until passing inside the stargate (z < -155)!
+    newWorldGroup.visible = true;
     scene.add(newWorldGroup);
 
     const cliffRockMat = new THREE.MeshStandardMaterial({
@@ -1914,6 +1967,22 @@ export default function Scene() {
       lightShaftGroup.add(shaft);
     });
     newWorldGroup.add(lightShaftGroup);
+
+    // --- PRE-PORTAL VOLUMETRIC LIGHT SHAFTS (SURFACE TO CAVERN CANYON) ---
+    const prePortalLightShaftGroup = new THREE.Group();
+    [
+      [-35, -25, -40, -0.2],
+      [35, -35, -60, 0.18],
+      [-42, -60, -100, -0.15],
+      [42, -80, -140, 0.12],
+      [-25, -95, -170, -0.08],
+    ].forEach(([shaftX, shaftY, shaftZ, rotation]) => {
+      const shaft = new THREE.Mesh(new THREE.PlaneGeometry(12, 100), lightShaftMat);
+      shaft.position.set(shaftX, shaftY, shaftZ);
+      shaft.rotation.z = rotation;
+      prePortalLightShaftGroup.add(shaft);
+    });
+    scene.add(prePortalLightShaftGroup);
 
     const vortexGroup = new THREE.Group();
     vortexGroup.position.set(104, -270, -885);
@@ -2480,947 +2549,37 @@ export default function Scene() {
       window.addEventListener("touchend", handleTouchEnd);
     }
 
-    const snapPoints = [0, 0.15, 0.35, 0.48, 0.60, 0.72, 0.84, 1.0];
+    // 100% Guaranteed GPU VRAM Pre-Warmup: Compiles & uploads all 3D groups to GPU VRAM
+    const warmupGPU = () => {
+      if (renderer && scene && camera && newWorldGroup) {
+        newWorldGroup.visible = true;
+        sideCliffGroup.visible = true;
+        caveMesh.visible = true;
+        bgMountainsGroup.visible = true;
+        waterCeilingMesh.visible = true;
 
-    const tl = gsap.timeline({
-      scrollTrigger: {
-        trigger: wrapper,
-        start: "top top",
-        end: "bottom bottom",
-        scrub: isMobile ? 2.2 : 1.4,
-        snap: {
-          snapTo: (progress, self) => {
-            // Surface (0%) <-> Cave Entrance (5% / Image 2): Automatic smooth snap without stopping/pausing midway
-            if (progress > 0 && progress < 0.05) {
-              if (self && self.direction === -1) {
-                return 0.0; // Auto snap up to surface hero view (Image 1)
-              }
-              return 0.05; // Auto snap down to cave entrance view (Image 2)
-            }
-            return progress;
-          },
-          duration: (snapValue) => {
-            if (snapValue === 0) return { min: 0.05, max: 0.12 };
-            if (snapValue === 0.05) return { min: 0.05, max: 0.15 };
-            return { min: 0.1, max: 0.25 };
-          },
-          delay: 0.0,
-          ease: "power2.out",
-        },
-        onUpdate: (self) => {
-          const currentProgress = Math.floor(self.progress * 100);
-          setScrollProgress(currentProgress);
+        // Force WebGL shader compilation & GPU texture buffer allocation
+        renderer.compile(scene, camera);
+        renderer.render(scene, camera);
 
-          // PRE-PORTAL FAST-SCROLL PROTECTION & PORTAL ENTRY SAFETY (progress <= 0.40)
-          if (self.progress <= 0.40) {
-            const rawVelocity = self.getVelocity();
-            const absVelocity = Math.abs(rawVelocity);
+        // Reset to initial pre-portal visibility state
+        newWorldGroup.visible = false;
+        sideCliffGroup.visible = false;
+        caveMesh.visible = false;
+        bgMountainsGroup.visible = false;
+        waterCeilingMesh.visible = false;
+      }
+      setTimeout(() => setLoading(false), 500);
+    };
 
-            // Proximity Dampening Zone: As progress approaches 0.40 (near portal threshold),
-            // smoothly reduce allowable velocity (sensitivity 1.0 down to 0.25)
-            const distanceToPortalThreshold = 0.40 - self.progress;
-            const proximityFactor = THREE.MathUtils.clamp(distanceToPortalThreshold / 0.20, 0.25, 1.0);
+    manager.onLoad = warmupGPU;
+    // Execute GPU warmup immediately to guarantee VRAM pre-upload even if assets are cached
+    warmupGPU();
 
-            // Clamp max velocity in pre-portal section to prevent fast-scroll overshooting
-            const maxAllowablePrePortalVelocity = 1400 * proximityFactor;
-
-            if (absVelocity > maxAllowablePrePortalVelocity && self.scroll) {
-              const clampedVel = Math.sign(rawVelocity) * maxAllowablePrePortalVelocity;
-              const targetScroll = self.scroll() + (clampedVel * 0.016);
-              self.scroll(targetScroll);
-            }
-          }
-        },
-      },
-    });
-
-    // Phase 1: Surface Ocean View (0 - 15%) - Dive directly down into ocean
-    tl.to(
-      camState,
-      {
-        x: 0,
-        y: -40,
-        z: -35,
-        targetX: 0,
-        targetY: -40,
-        targetZ: -85,
-        rx: -0.08,
-        ry: 0,
-        fogDensity: 0.012,
-        duration: 1.5,
-        ease: "power1.inOut",
-      },
-      0
-    );
-
-    // Phase 2: Align Camera with Deeper Submerged Main Portal Ring Center at y: -110, z: -125 (15% - 40%)
-    tl.to(
-      camState,
-      {
-        x: 0,
-        y: -110,
-        z: -125,
-        targetX: 0,
-        targetY: -110,
-        targetZ: -190,
-        rx: 0,
-        ry: 0,
-        fogDensity: 0.016,
-        duration: 2.5,
-        ease: "power2.inOut",
-      },
-      1.5
-    );
-
-    // Phase 3: Fly STRAIGHT THROUGH CENTER of Circular Portal Stargate (40% - 46%)
-    tl.to(
-      camState,
-      {
-        x: 0,
-        y: -110,
-        z: -210,
-        targetX: 0,
-        targetY: -110,
-        targetZ: -260,
-        rx: 0,
-        ry: 0,
-        fogDensity: 0.015,
-        duration: 1.0,
-        ease: "power1.inOut",
-      },
-      4.0
-    );
-
-    // Exit / Clear Portal Area (46% - 50%) — Fly forward in open water to z: -250, leaving stargate ring behind
-    tl.to(
-      camState,
-      {
-        x: 0,
-        y: -110,
-        z: -250,
-        targetX: 0,
-        targetY: -110,
-        targetZ: -300,
-        fogDensity: 0.015,
-        duration: 0.8,
-        ease: "power1.out",
-      },
-      5.0
-    );
-
-    // INSIDE EVENT PORTAL: Cinematic AAA Underwater Exploration Choreography
-    // Continuous curved trajectories, dynamic look-at targets, micro-banking rolls, and tailored FOV transitions.
-    // Event Platform Coordinates:
-    // 01 Coding: (-42, -110, -300) | 02 Web Design: (42, -150, -400) | 03 IT Quiz: (-42, -190, -500)
-    // 04 Gaming: (42, -230, -600)  | 05 Tech Talk: (-42, -230, -700) | 06 Surprise: (42, -310, -800)
-    // 07 IT Manager: (-42, -310, -900) | 08 Startup: (42, -390, -1000) | 09 Dance: (-42, -430, -1100)
-    // 10 Photography: (0, -470, -1200)
-
-    // EVENT 01 — CODING: Cinematic Approach → Hero Rise (y: -99) → Straight Rightward Motion Pointing to Crystal (x: +22) → Downward Exit (y: -124)
-    // 1. APPROACH: Exit portal at low position (y: -118), moving forward in Z toward Coding platform
-    tl.to(
-      camState,
-      {
-        x: -18,
-        y: -118,
-        z: -265,
-        targetX: -22,
-        targetY: -106,
-        targetZ: -318,
-        fov: 64,
-        fogDensity: 0.015,
-        duration: 1.2,
-        ease: "power2.inOut",
-      },
-      5.2
-    );
-
-    // 2. HERO ARRIVAL AT DEPTH 99M: Camera rises to elevation y: -99, pointing directly at the crystal orb
-    tl.to(
-      camState,
-      {
-        x: -30,
-        y: -99,
-        z: -282,
-        targetX: -22,
-        targetY: -104,
-        targetZ: -318,
-        fov: 54,
-        duration: 1.3,
-        ease: "power2.out",
-      },
-      6.4
-    );
-
-    // 3. STRAIGHT RIGHT SIDE MOTION POINTING TO CRYSTAL: Glides straight to the RIGHT (x: -30 → +22) while continuously pointing at the crystal orb
-    // 3. SMOOTH ORBIT AROUND CRYSTAL:
-    // Camera moves in a curved right-side arc while continuously looking at the crystal.
-    // This creates a cinematic rotation instead of a straight horizontal slide.
-    // 3. EXTENDED CINEMATIC ORBIT AROUND CODING CRYSTAL
-    // Camera makes a wide curved arc around the crystal while continuously
-    // looking at the crystal. No straight horizontal movement.
-    tl.to(
-      camState,
-      {
-        x: -5,
-        y: -91,
-        z: -300,
-        targetX: -22,
-        targetY: -104,
-        targetZ: -318,
-        fov: 51,
-        duration: 1.1,
-        ease: "power2.inOut",
-      },
-      7.7
-    );
-
-    tl.to(
-      camState,
-      {
-        x: 18,
-        y: -88,
-        z: -307,
-        targetX: -22,
-        targetY: -104,
-        targetZ: -318,
-        fov: 49,
-        duration: 1.2,
-        ease: "sine.inOut",
-      },
-      8.8
-    );
-
-    tl.to(
-      camState,
-      {
-        x: 38,
-        y: -96,
-        z: -296,
-        targetX: -22,
-        targetY: -104,
-        targetZ: -318,
-        fov: 48,
-        duration: 1.2,
-        ease: "sine.inOut",
-      },
-      10.0
-    );
-
-    // 4. THEN DOWNWARD EXIT: After moving straight right, smoothly curve downward in Y (y: -99 → -124) toward Event 02
-    // 4. SMOOTH DOWNWARD EXIT AFTER EXTENDED ORBIT
-    tl.to(
-      camState,
-      {
-        x: 28,
-        y: -124,
-        z: -340,
-        targetX: 28,
-        targetY: -138,
-        targetZ: -405,
-        fov: 64,
-        fogDensity: 0.016,
-        duration: 1.3,
-        ease: "power1.inOut",
-      },
-      11.2
-    );
-
-    // EVENT 02 — WEB DESIGN: Wide Arrival → Right Flank Orbit → Hero Inspection → Extended Micro-Orbit → Smooth Exit
-    tl.to(
-      camState,
-      {
-        x: 42,
-        y: -168,
-        z: -350,
-        targetX: 32,
-        targetY: -183,
-        targetZ: -420,
-        fov: 68,
-        fogDensity: 0.017,
-        duration: 1.2,
-        ease: "power2.out",
-      },
-      12.5
-    );
-    tl.to(
-      camState,
-      {
-        x: 48,
-        y: -176,
-        z: -390,
-        targetX: 32,
-        targetY: -183,
-        targetZ: -420,
-        fov: 58,
-        duration: 1.2,
-        ease: "sine.inOut",
-      },
-      13.7
-    );
-    tl.to(
-      camState,
-      {
-        x: 30,
-        y: -174,
-        z: -402,
-        targetX: 32,
-        targetY: -183,
-        targetZ: -420,
-        fov: 51,
-        duration: 1.1,
-        ease: "sine.inOut",
-      },
-      14.9
-    );
-    tl.to(
-      camState,
-      {
-        x: 18,
-        y: -176,
-        z: -412,
-        targetX: 32,
-        targetY: -183,
-        targetZ: -420,
-        fov: 52,
-        duration: 1.1,
-        ease: "sine.inOut",
-      },
-      16.0
-    );
-    tl.to(
-      camState,
-      {
-        x: -10,
-        y: -195,
-        z: -445,
-        targetX: 32,
-        targetY: -183,
-        targetZ: -420,
-        fov: 64,
-        fogDensity: 0.018,
-        duration: 1.2,
-        ease: "power1.inOut",
-      },
-      17.1
-    );
-
-    // EVENT 03 — IT QUIZ: Descending Approach → Left Flank Orbit → Hero Technical Focus → Micro-Arc → Smooth Exit Right
-    tl.to(
-      camState,
-      {
-        x: -18,
-        y: -170,
-        z: -442,
-        targetX: -32,
-        targetY: -183,
-        targetZ: -508,
-        fov: 70,
-        fogDensity: 0.019,
-        duration: 1.2,
-        ease: "power2.out",
-      },
-      18.3
-    );
-    tl.to(
-      camState,
-      {
-        x: -44,
-        y: -176,
-        z: -475,
-        targetX: -32,
-        targetY: -183,
-        targetZ: -508,
-        fov: 58,
-        duration: 1.2,
-        ease: "sine.inOut",
-      },
-      19.5
-    );
-    tl.to(
-      camState,
-      {
-        x: -28,
-        y: -174,
-        z: -488,
-        targetX: -32,
-        targetY: -183,
-        targetZ: -508,
-        fov: 51,
-        duration: 1.1,
-        ease: "sine.inOut",
-      },
-      20.7
-    );
-    tl.to(
-      camState,
-      {
-        x: -16,
-        y: -176,
-        z: -496,
-        targetX: -32,
-        targetY: -183,
-        targetZ: -508,
-        fov: 53,
-        duration: 1.1,
-        ease: "sine.inOut",
-      },
-      21.8
-    );
-    tl.to(
-      camState,
-      {
-        x: 22,
-        y: -200,
-        z: -533,
-        targetX: -32,
-        targetY: -183,
-        targetZ: -508,
-        fov: 66,
-        fogDensity: 0.020,
-        duration: 1.2,
-        ease: "power1.inOut",
-      },
-      22.9
-    );
-
-    // EVENT 04 — GAMING: Energetic Fast Swoop → Spiral Arc → Close Shrine → Fast Exit
-    tl.to(
-      camState,
-      {
-        x: 18,
-        y: -200,
-        z: -528,
-        targetX: 32,
-        targetY: -223,
-        targetZ: -608,
-        fov: 72,
-        fogDensity: 0.021,
-        duration: 1.2,
-        ease: "power2.out",
-      },
-      24.1
-    );
-    tl.to(
-      camState,
-      {
-        x: 42,
-        y: -218,
-        z: -568,
-        targetX: 32,
-        targetY: -223,
-        targetZ: -608,
-        fov: 60,
-        duration: 1.0,
-        ease: "power1.inOut",
-      },
-      25.7
-    );
-    tl.to(
-      camState,
-      {
-        x: 32,
-        y: -216,
-        z: -570,
-        targetX: 32,
-        targetY: -223,
-        targetZ: -608,
-        fov: 48,
-        duration: 0.6,
-        ease: "sine.inOut",
-      },
-      26.7
-    );
-    tl.to(
-      camState,
-      {
-        x: -25,
-        y: -216,
-        z: -633,
-        targetX: 32,
-        targetY: -223,
-        targetZ: -608,
-        fov: 70,
-        fogDensity: 0.0215,
-        duration: 0.8,
-        ease: "power1.inOut",
-      },
-      27.3
-    );
-
-    // EVENT 05 — TECH TALK: Slow Approach → Cave Entrance Reveal → Move Toward Cave → Shrine Reveal → Slow Exit
-    tl.to(
-      camState,
-      {
-        x: -15,
-        y: -210,
-        z: -628,
-        targetX: -32,
-        targetY: -223,
-        targetZ: -708,
-        fov: 64,
-        fogDensity: 0.022,
-        duration: 1.2,
-        ease: "power1.out",
-      },
-      28.3
-    );
-    tl.to(
-      camState,
-      {
-        x: -30,
-        y: -222,
-        z: -653,
-        targetX: -32,
-        targetY: -223,
-        targetZ: -708,
-        fov: 58,
-        duration: 1.0,
-        ease: "power1.inOut",
-      },
-      29.9
-    );
-    tl.to(
-      camState,
-      {
-        x: -32,
-        y: -220,
-        z: -670,
-        targetX: -32,
-        targetY: -223,
-        targetZ: -708,
-        fov: 48,
-        duration: 0.6,
-        ease: "sine.inOut",
-      },
-      30.9
-    );
-    tl.to(
-      camState,
-      {
-        x: 20,
-        y: -260,
-        z: -738,
-        targetX: -32,
-        targetY: -223,
-        targetZ: -708,
-        fov: 62,
-        fogDensity: 0.023,
-        duration: 0.8,
-        ease: "power1.inOut",
-      },
-      31.5
-    );
-
-    // EVENT 06 — SURPRISE EVENT: Deep Approach → Right Approach → Depth Reveal → Hero Orbit → Hero Settle → Exit
-    tl.to(
-      camState,
-      {
-        x: 14,
-        y: -278,
-        z: -785,
-        targetX: 32,
-        targetY: -303,
-        targetZ: -860,
-        fov: 66,
-        fogDensity: 0.024,
-        duration: 1.2,
-        ease: "power2.out",
-      },
-      32.5
-    );
-    tl.to(
-      camState,
-      {
-        x: 42,
-        y: -292,
-        z: -820,
-        targetX: 32,
-        targetY: -303,
-        targetZ: -860,
-        fov: 60,
-        duration: 1.2,
-        ease: "sine.inOut",
-      },
-      33.7
-    );
-    tl.to(
-      camState,
-      {
-        x: 48,
-        y: -298,
-        z: -838,
-        targetX: 32,
-        targetY: -303,
-        targetZ: -860,
-        fov: 55,
-        duration: 1.1,
-        ease: "sine.inOut",
-      },
-      34.9
-    );
-    tl.to(
-      camState,
-      {
-        x: 30,
-        y: -294,
-        z: -848,
-        targetX: 32,
-        targetY: -303,
-        targetZ: -860,
-        fov: 50,
-        duration: 1.2,
-        ease: "sine.inOut",
-      },
-      36.0
-    );
-    tl.to(
-      camState,
-      {
-        x: 18,
-        y: -296,
-        z: -855,
-        targetX: 32,
-        targetY: -303,
-        targetZ: -860,
-        fov: 51,
-        duration: 1.1,
-        ease: "sine.inOut",
-      },
-      37.2
-    );
-    tl.to(
-      camState,
-      {
-        x: -18,
-        y: -315,
-        z: -885,
-        targetX: -28,
-        targetY: -294,
-        targetZ: -905,
-        fov: 64,
-        fogDensity: 0.0245,
-        duration: 1.2,
-        ease: "power1.inOut",
-      },
-      38.3
-    );
-
-    // EVENT 07 — IT MANAGER SPIRE: 5-Phase 3D Orbital Trajectory
-    tl.to(
-      camState,
-      {
-        x: -10,
-        y: -284,
-        z: -876,
-        targetX: -28,
-        targetY: -294,
-        targetZ: -905,
-        fov: 64,
-        fogDensity: 0.025,
-        duration: 1.2,
-        ease: "power2.out",
-      },
-      39.5
-    );
-    tl.to(
-      camState,
-      {
-        x: -42,
-        y: -286,
-        z: -888,
-        targetX: -28,
-        targetY: -294,
-        targetZ: -905,
-        fov: 58,
-        duration: 1.2,
-        ease: "sine.inOut",
-      },
-      40.9
-    );
-    tl.to(
-      camState,
-      {
-        x: -30,
-        y: -287,
-        z: -894,
-        targetX: -28,
-        targetY: -294,
-        targetZ: -905,
-        fov: 51,
-        duration: 1.1,
-        ease: "sine.inOut",
-      },
-      42.3
-    );
-    tl.to(
-      camState,
-      {
-        x: -18,
-        y: -288,
-        z: -898,
-        targetX: -28,
-        targetY: -294,
-        targetZ: -905,
-        fov: 52,
-        duration: 1.1,
-        ease: "sine.inOut",
-      },
-      43.6
-    );
-    tl.to(
-      camState,
-      {
-        x: 15,
-        y: -350,
-        z: -933,
-        targetX: 28,
-        targetY: -383,
-        targetZ: -1015,
-        fov: 64,
-        fogDensity: 0.0255,
-        duration: 1.1,
-        ease: "power1.inOut",
-      },
-      44.9
-    );
-
-    // EVENT 08 — STARTUP: 5-Phase 3D Orbital Trajectory
-    tl.to(
-      camState,
-      {
-        x: 18,
-        y: -365,
-        z: -970,
-        targetX: 28,
-        targetY: -383,
-        targetZ: -1015,
-        fov: 64,
-        fogDensity: 0.026,
-        duration: 1.2,
-        ease: "power2.out",
-      },
-      46.1
-    );
-    tl.to(
-      camState,
-      {
-        x: 48,
-        y: -366,
-        z: -995,
-        targetX: 28,
-        targetY: -383,
-        targetZ: -1015,
-        fov: 58,
-        duration: 1.2,
-        ease: "sine.inOut",
-      },
-      47.4
-    );
-    tl.to(
-      camState,
-      {
-        x: 34,
-        y: -367,
-        z: -1002,
-        targetX: 28,
-        targetY: -383,
-        targetZ: -1015,
-        fov: 51,
-        duration: 1.1,
-        ease: "sine.inOut",
-      },
-      48.7
-    );
-    tl.to(
-      camState,
-      {
-        x: 24,
-        y: -368,
-        z: -1004,
-        targetX: 28,
-        targetY: -383,
-        targetZ: -1015,
-        fov: 52,
-        duration: 1.1,
-        ease: "sine.inOut",
-      },
-      50.0
-    );
-    tl.to(
-      camState,
-      {
-        x: -15,
-        y: -405,
-        z: -1045,
-        targetX: -28,
-        targetY: -423,
-        targetZ: -1115,
-        fov: 64,
-        fogDensity: 0.0265,
-        duration: 1.1,
-        ease: "power1.inOut",
-      },
-      51.3
-    );
-
-    // EVENT 09 — DANCE: 5-Phase 3D Orbital Trajectory
-    tl.to(
-      camState,
-      {
-        x: -18,
-        y: -405,
-        z: -1080,
-        targetX: -28,
-        targetY: -423,
-        targetZ: -1115,
-        fov: 64,
-        fogDensity: 0.027,
-        duration: 1.2,
-        ease: "power2.out",
-      },
-      52.5
-    );
-    tl.to(
-      camState,
-      {
-        x: -48,
-        y: -406,
-        z: -1095,
-        targetX: -28,
-        targetY: -423,
-        targetZ: -1115,
-        fov: 58,
-        duration: 1.2,
-        ease: "sine.inOut",
-      },
-      53.8
-    );
-    tl.to(
-      camState,
-      {
-        x: -34,
-        y: -407,
-        z: -1102,
-        targetX: -28,
-        targetY: -423,
-        targetZ: -1115,
-        fov: 51,
-        duration: 1.1,
-        ease: "sine.inOut",
-      },
-      55.1
-    );
-    tl.to(
-      camState,
-      {
-        x: -24,
-        y: -408,
-        z: -1104,
-        targetX: -28,
-        targetY: -423,
-        targetZ: -1115,
-        fov: 52,
-        duration: 1.1,
-        ease: "sine.inOut",
-      },
-      56.4
-    );
-    tl.to(
-      camState,
-      {
-        x: 10,
-        y: -445,
-        z: -1145,
-        targetX: 8,
-        targetY: -463,
-        targetZ: -1215,
-        fov: 64,
-        fogDensity: 0.0275,
-        duration: 1.1,
-        ease: "power1.inOut",
-      },
-      57.7
-    );
-
-    // EVENT 10 — PHOTOGRAPHY: 5-Phase 3D Orbital Trajectory & Grand Finale Settle
-    tl.to(
-      camState,
-      {
-        x: 16,
-        y: -446,
-        z: -1175,
-        targetX: 8,
-        targetY: -463,
-        targetZ: -1215,
-        fov: 64,
-        fogDensity: 0.028,
-        duration: 1.3,
-        ease: "power2.out",
-      },
-      58.9
-    );
-    tl.to(
-      camState,
-      {
-        x: 20,
-        y: -447,
-        z: -1190,
-        targetX: 8,
-        targetY: -463,
-        targetZ: -1215,
-        fov: 58,
-        duration: 1.3,
-        ease: "sine.inOut",
-      },
-      60.3
-    );
-    tl.to(
-      camState,
-      {
-        x: 10,
-        y: -448,
-        z: -1198,
-        targetX: 8,
-        targetY: -463,
-        targetZ: -1215,
-        fov: 50,
-        duration: 1.2,
-        ease: "sine.inOut",
-      },
-      61.7
-    );
-    tl.to(
-      camState,
-      {
-        x: 4,
-        y: -449,
-        z: -1200,
-        targetX: 8,
-        targetY: -463,
-        targetZ: -1215,
-        fov: 48,
-        duration: 1.2,
-        ease: "sine.inOut",
-      },
-      63.0
-    );
-    tl.to(
-      camState,
-      {
-        x: 0,
-        y: -450,
-        z: -1202,
-        targetX: 8,
-        targetY: -463,
-        targetZ: -1215,
-        fov: 46,
-        fogDensity: 0.029,
-        duration: 1.5,
-        ease: "power2.out",
-      },
-      64.3
-    );
+    const tl = createScrollTimeline(wrapper);
+    if (tl) {
+      buildSceneCameraTimeline(tl, camState);
+    }
 
     tl.to({}, { duration: 2.0 });
 
@@ -3428,6 +2587,14 @@ export default function Scene() {
     let animationId;
     let frameCount = 0;
     let lastFpsCheck = performance.now();
+    const fogColorA = new THREE.Color(0x052a42);
+    const fogColorB = new THREE.Color(0x011728);
+    const tempCaveFogColor = new THREE.Color();
+    const colorWhite = new THREE.Color(0xffffff);
+    const colorTeal = new THREE.Color(0x006699);
+    const colorDeepNavy = new THREE.Color(0x002e4d);
+    const targetCamPos = new THREE.Vector3();
+
     function animate() {
       animationId = requestAnimationFrame(animate);
 
@@ -3459,7 +2626,7 @@ export default function Scene() {
       waterCeilingMat.uniforms.uTime.value = t;
 
       const depthFactor = Math.min(1.0, Math.abs(camState.y) / 470);
-      const caveFogColor = new THREE.Color(0x052a42).lerp(new THREE.Color(0x011728), depthFactor);
+      tempCaveFogColor.copy(fogColorA).lerp(fogColorB, depthFactor);
 
       // Single Shared Blend Factor: y: 0.0 (surface hero view: 0.0) -> y: -10.0 (cave entrance view: 1.0)
       const rawBlend = THREE.MathUtils.clamp((0.0 - camState.y) / 10.0, 0.0, 1.0);
@@ -3512,17 +2679,22 @@ export default function Scene() {
           scene.environment = exrEnvironmentTexture;
           scene.backgroundIntensity = 1.0 - underwaterBlend;
         }
-        renderer.setClearColor(caveFogColor, 1.0);
+        renderer.setClearColor(tempCaveFogColor, 1.0);
 
         const targetFogDensity = camState.fogDensity * 0.5 * underwaterBlend;
         if (targetFogDensity > 0.0001) {
-          scene.fog = new THREE.FogExp2(caveFogColor, targetFogDensity);
+          if (!scene.fog || !(scene.fog instanceof THREE.FogExp2)) {
+            scene.fog = new THREE.FogExp2(tempCaveFogColor, targetFogDensity);
+          } else {
+            scene.fog.color.copy(tempCaveFogColor);
+            scene.fog.density = targetFogDensity;
+          }
         } else {
           scene.fog = null;
         }
 
         sunLight.intensity = THREE.MathUtils.lerp(2.5, Math.max(0.6, 2.4 * (1.0 - depthFactor * 0.6)), underwaterBlend);
-        ambientLight.color.copy(new THREE.Color(0xffffff).lerp(new THREE.Color(0x006699), underwaterBlend));
+        ambientLight.color.copy(colorWhite).lerp(colorTeal, underwaterBlend);
         ambientLight.intensity = THREE.MathUtils.lerp(1.0, 1.6, underwaterBlend);
 
         // 3. Soft Underwater Rock Blur & Opacity Crossfade
@@ -3552,13 +2724,18 @@ export default function Scene() {
           }
         });
 
-        portalBackdropMat.color.copy(caveFogColor);
+        portalBackdropMat.color.copy(tempCaveFogColor);
       } else {
-        scene.background = caveFogColor;
-        scene.fog = new THREE.FogExp2(caveFogColor, camState.fogDensity * 0.5);
+        scene.background = tempCaveFogColor;
+        if (!scene.fog || !(scene.fog instanceof THREE.FogExp2)) {
+          scene.fog = new THREE.FogExp2(tempCaveFogColor, camState.fogDensity * 0.5);
+        } else {
+          scene.fog.color.copy(tempCaveFogColor);
+          scene.fog.density = camState.fogDensity * 0.5;
+        }
 
         sunLight.intensity = Math.max(0.6, 2.4 * (1.0 - depthFactor * 0.6));
-        ambientLight.color.setHex(0x006699).lerp(new THREE.Color(0x002e4d), depthFactor);
+        ambientLight.color.copy(colorTeal).lerp(colorDeepNavy, depthFactor);
         ambientLight.intensity = 1.6 * (1.0 - depthFactor * 0.2);
 
         waterCeilingMesh.visible = true;
@@ -3585,15 +2762,12 @@ export default function Scene() {
           }
         });
 
-        portalBackdropMat.color.copy(caveFogColor);
+        portalBackdropMat.color.copy(tempCaveFogColor);
       }
 
-      // Hard Boundary Clamp for Pre-Portal Camera (camState.z > -185)
-      // Guarantees fast scrolling momentum cannot jump or overshoot past the portal threshold
-      if (camState.z > -185 && scrollProgress <= 40) {
+      // Pre-portal alignment guidance: Keep camera centered during surface dive (camState.y > -40)
+      if (camState.y > -40 && scrollProgress <= 15) {
         camState.x = THREE.MathUtils.clamp(camState.x, -12, 12);
-        camState.y = THREE.MathUtils.clamp(camState.y, -110, 5);
-        camState.z = THREE.MathUtils.clamp(camState.z, -184.9, 5);
       }
 
       // STRICT REQUIREMENT: Event World is STRICTLY INVISIBLE until camera passes inside circular portal ring (camState.z < -185)!
@@ -3604,7 +2778,8 @@ export default function Scene() {
         caveMesh.visible = false;
         portalBackdropMesh.visible = false;
       } else {
-        newWorldGroup.visible = false;
+        newWorldGroup.visible = true;
+        sideCliffGroup.visible = true;
         portalBackdropMesh.visible = true;
       }
 
@@ -3612,12 +2787,12 @@ export default function Scene() {
       const portalApproachRaw = THREE.MathUtils.clamp((-20.0 - camState.y) / 55.0, 0.0, 1.0);
       const portalApproachBlend = THREE.MathUtils.lerp(0.2, 1.0, THREE.MathUtils.smoothstep(portalApproachRaw, 0.0, 1.0));
 
-      portalGroup.traverse((child) => {
-        if (child.isMesh && child.material && child !== portalDisc) {
-          child.material.transparent = true;
-          child.material.opacity = portalApproachBlend;
-        }
-      });
+      prePortalParticleMat.uniforms.uTime.value = t;
+      portalBackLight.intensity = THREE.MathUtils.lerp(4.0, 10.0, portalApproachBlend);
+
+      for (let i = 0; i < cachedPortalMeshes.length; i++) {
+        cachedPortalMeshes[i].material.opacity = portalApproachBlend;
+      }
 
       // Update Portal Vortex Shader and Flow Field Water Particles
       portalDiscMat.uniforms.uTime.value = t;
@@ -3781,10 +2956,11 @@ export default function Scene() {
         swarm.instanceMatrix.needsUpdate = true;
       });
 
-      // Natural Subtle Underwater Floating Buoyancy Effect
-      const floatY = Math.sin(t * 0.4) * 0.35;
-      const floatX = Math.cos(t * 0.3) * 0.25;
-      const floatRotZ = Math.sin(t * 0.2) * 0.008;
+      // Natural subtle floating effect (Pre-portal only; disabled post-portal for 100% scroll-driven stability)
+      const isPostPortal = camState.z < -245;
+      const floatY = isPostPortal ? 0 : Math.sin(t * 0.4) * 0.35;
+      const floatX = isPostPortal ? 0 : Math.cos(t * 0.3) * 0.25;
+      const floatRotZ = isPostPortal ? 0 : Math.sin(t * 0.2) * 0.008;
 
       // Smooth Dynamic Camera FOV Transitions (Fast travel vs Hero Close-up)
       if (camState.fov && Math.abs(camera.fov - camState.fov) > 0.05) {
@@ -3825,9 +3001,9 @@ export default function Scene() {
           eventSpeedScale = 1.0;
         } else if (distToShrine > 42) {
           const t = (distToShrine - 42) / 23;
-          eventSpeedScale = 0.08 + 0.92 * (t * t * (3 - 2 * t));
+          eventSpeedScale = 0.55 + 0.45 * (t * t * (3 - 2 * t));
         } else {
-          eventSpeedScale = 0.08;
+          eventSpeedScale = 0.55;
         }
 
         if (distToShrine < 60) {
@@ -3857,9 +3033,9 @@ export default function Scene() {
           eventSpeedScale = 1.0;
         } else if (distToShrine > 42) {
           const t = (distToShrine - 42) / 23;
-          eventSpeedScale = 0.08 + 0.92 * (t * t * (3 - 2 * t));
+          eventSpeedScale = 0.55 + 0.45 * (t * t * (3 - 2 * t));
         } else {
-          eventSpeedScale = 0.08;
+          eventSpeedScale = 0.55;
         }
 
         const fastScrollVelocity = Math.abs(vz);
@@ -3883,9 +3059,9 @@ export default function Scene() {
           eventSpeedScale = 1.0;
         } else if (distToShrine > 42) {
           const t = (distToShrine - 42) / 23;
-          eventSpeedScale = 0.08 + 0.92 * (t * t * (3 - 2 * t));
+          eventSpeedScale = 0.55 + 0.45 * (t * t * (3 - 2 * t));
         } else {
-          eventSpeedScale = 0.08;
+          eventSpeedScale = 0.55;
         }
 
         const fastScrollVelocity = Math.abs(vz);
@@ -3909,9 +3085,9 @@ export default function Scene() {
           eventSpeedScale = 1.0;
         } else if (distToShrine > 42) {
           const t = (distToShrine - 42) / 23;
-          eventSpeedScale = 0.08 + 0.92 * (t * t * (3 - 2 * t));
+          eventSpeedScale = 0.55 + 0.45 * (t * t * (3 - 2 * t));
         } else {
-          eventSpeedScale = 0.08;
+          eventSpeedScale = 0.55;
         }
 
         const fastScrollVelocity = Math.abs(vz);
@@ -3935,9 +3111,9 @@ export default function Scene() {
           eventSpeedScale = 1.0;
         } else if (distToShrine > 42) {
           const t = (distToShrine - 42) / 23;
-          eventSpeedScale = 0.08 + 0.92 * (t * t * (3 - 2 * t));
+          eventSpeedScale = 0.55 + 0.45 * (t * t * (3 - 2 * t));
         } else {
-          eventSpeedScale = 0.08;
+          eventSpeedScale = 0.55;
         }
 
         const fastScrollVelocity = Math.abs(vz);
@@ -3961,9 +3137,9 @@ export default function Scene() {
           eventSpeedScale = 1.0;
         } else if (distToShrine > 42) {
           const t = (distToShrine - 42) / 23;
-          eventSpeedScale = 0.08 + 0.92 * (t * t * (3 - 2 * t));
+          eventSpeedScale = 0.55 + 0.45 * (t * t * (3 - 2 * t));
         } else {
-          eventSpeedScale = 0.08;
+          eventSpeedScale = 0.55;
         }
 
         const fastScrollVelocity = Math.abs(vz);
@@ -3987,9 +3163,9 @@ export default function Scene() {
           eventSpeedScale = 1.0;
         } else if (distToShrine > 42) {
           const t = (distToShrine - 42) / 23;
-          eventSpeedScale = 0.08 + 0.92 * (t * t * (3 - 2 * t));
+          eventSpeedScale = 0.55 + 0.45 * (t * t * (3 - 2 * t));
         } else {
-          eventSpeedScale = 0.08;
+          eventSpeedScale = 0.55;
         }
 
         const fastScrollVelocity = Math.abs(vz);
@@ -4013,9 +3189,9 @@ export default function Scene() {
           eventSpeedScale = 1.0;
         } else if (distToShrine > 42) {
           const t = (distToShrine - 42) / 23;
-          eventSpeedScale = 0.08 + 0.92 * (t * t * (3 - 2 * t));
+          eventSpeedScale = 0.55 + 0.45 * (t * t * (3 - 2 * t));
         } else {
-          eventSpeedScale = 0.08;
+          eventSpeedScale = 0.55;
         }
 
         const fastScrollVelocity = Math.abs(vz);
@@ -4025,26 +3201,33 @@ export default function Scene() {
         }
       }
 
-      // Position spring lerp for smooth, liquid camera movement
-      const basePosLerp = isMobile ? 0.10 : 0.07;
+      // Position lerp for smooth camera movement with instant dead-zone lock when scroll stops
+      const basePosLerp = isMobile ? 0.12 : 0.10;
       const effectivePosLerp = basePosLerp * eventSpeedScale;
-      smoothCamPos.lerp(new THREE.Vector3(camState.x + event1RightArcOffset, camState.y, camState.z), effectivePosLerp);
+      targetCamPos.set(camState.x + event1RightArcOffset, camState.y, camState.z);
+
+      if (smoothCamPos.distanceToSquared(targetCamPos) < 0.0001) {
+        smoothCamPos.copy(targetCamPos);
+      } else {
+        smoothCamPos.lerp(targetCamPos, effectivePosLerp);
+      }
 
       // Surface-to-Portal & Event Landmark focus:
       // GSAP keyframes define precise look-at targets (targetX, targetY, targetZ) for cinematic reveals.
       desiredLookAt.set(camState.targetX, camState.targetY, camState.targetZ);
-      const baseLookLerp = isMobile ? 0.10 : 0.07;
+      const baseLookLerp = isMobile ? 0.12 : 0.10;
       const effectiveLookLerp = baseLookLerp * eventSpeedScale;
-      currentLookAt.lerp(desiredLookAt, effectiveLookLerp);
+      if (currentLookAt.distanceToSquared(desiredLookAt) < 0.0001) {
+        currentLookAt.copy(desiredLookAt);
+      } else {
+        currentLookAt.lerp(desiredLookAt, effectiveLookLerp);
+      }
 
-      // Portal Center Tunnel Guidance: Guarantee camera passes STRAIGHT THROUGH CENTER of Stargate Ring (z: -160 to -215)
+      // Portal Center Tunnel Guidance: Reduce mouse parallax through portal stargate ring
       let currentParallax = parallaxStrength;
       if (camState.z <= -160 && camState.z >= -215) {
         const portalCenterFactor = THREE.MathUtils.clamp(1.0 - Math.abs(camState.z - (-190)) / 25.0, 0.0, 1.0);
-        const alignBlend = THREE.MathUtils.smoothstep(portalCenterFactor, 0.0, 1.0);
-        smoothCamPos.x = THREE.MathUtils.lerp(smoothCamPos.x, 0.0, alignBlend);
-        smoothCamPos.y = THREE.MathUtils.lerp(smoothCamPos.y, -110.0, alignBlend);
-        currentParallax *= (1.0 - alignBlend);
+        currentParallax *= (1.0 - THREE.MathUtils.smoothstep(portalCenterFactor, 0.0, 1.0));
       }
 
       camera.position.set(
@@ -4053,27 +3236,7 @@ export default function Scene() {
         smoothCamPos.z
       );
 
-      // A soft, inactive-in-normal-travel guard keeps the post-portal camera
-      // outside shrine and platform envelopes if a future keyframe is tightened.
-      if (camState.z < -245) {
-        for (const node of eventNodes) {
-          safetyOffset.set(
-            camera.position.x - node.pos.x,
-            camera.position.y - (node.pos.y + 7.2),
-            camera.position.z - node.pos.z
-          );
-          const shrineDistance = safetyOffset.length();
-          if (shrineDistance < 11.5) {
-            safetyOffset.multiplyScalar(1 / Math.max(shrineDistance, 0.001));
-            safeCameraPosition.set(
-              node.pos.x + safetyOffset.x * 11.5,
-              node.pos.y + 7.2 + safetyOffset.y * 11.5,
-              node.pos.z + safetyOffset.z * 11.5
-            );
-            camera.position.lerp(safeCameraPosition, 0.18);
-          }
-        }
-      }
+
 
       // Smooth underwater steadicam look-ahead gaze with micro-banking roll
       camera.lookAt(
@@ -4131,8 +3294,8 @@ export default function Scene() {
         window.removeEventListener("touchend", handleTouchEnd);
       }
       cancelAnimationFrame(animationId);
-      tl.kill();
-      ScrollTrigger.getAll().forEach((t) => t.kill());
+      if (tl) tl.kill();
+      cleanupScroll();
       container.removeChild(renderer.domElement);
       renderer.dispose();
       waterGeometry.dispose();
