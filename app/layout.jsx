@@ -26,8 +26,8 @@ export default function RootLayout({ children }) {
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
+        <Menu />
         <SmoothScroll>
-          <Menu />
           {children}
         </SmoothScroll>
       </body>
