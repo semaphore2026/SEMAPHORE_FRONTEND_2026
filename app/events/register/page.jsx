@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import WaterWave from '@/components/WaterWaveWrapper';
-
+import Footer from "@/components/Footer";
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://13.201.89.79';
 
 export default function EventsPage() {
@@ -643,6 +643,9 @@ export default function EventsPage() {
         )}
 
       </div>
+      <div className="mt-12">
+  <Footer />
+</div>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 "use client";
-
+import Footer from "@/components/Footer";
 import React, { useState } from "react";
 import Link from "next/link";
 import WaterWave from "../WaterWaveWrapper";
@@ -213,7 +213,9 @@ export default function DeveloperPage() {
         </div>
 
       </footer>
-
+<div className="mt-12">
+  <Footer />
+</div>
     </div>
   );
 }
