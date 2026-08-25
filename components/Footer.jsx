@@ -120,24 +120,7 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* Location Map */}
-        <div className="flex flex-col space-y-4 mb-16">
-          <h4 className="text-xs font-bold tracking-[0.3em] text-cyan-400 uppercase">
-            LOCATE US
-          </h4>
-          <div className="w-full max-w-md h-[160px] rounded-xl overflow-hidden border border-cyan-500/20 shadow-[0_0_25px_rgba(0,255,255,0.08)]">
-            <iframe
-              title="NMAMIT Nitte Location"
-              src="https://www.google.com/maps?q=NMAM+Institute+of+Technology+Nitte&output=embed"
-              width="100%"
-              height="100%"
-              style={{ border: 0, filter: "invert(90%) hue-rotate(180deg) contrast(90%)" }}
-              allowFullScreen=""
-              loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
-            />
-          </div>
-        </div>
+  
 
         {/* Bottom Bar */}
         <div className="pt-8 border-t border-cyan-500/20 flex flex-col md:flex-row justify-between items-center gap-4 text-[10px] text-cyan-100/40 tracking-widest uppercase">

@@ -9,6 +9,7 @@ import SetTeamCard from '@/components/profile/SetTeamCard';
 import WaterWave from '@/components/WaterWaveWrapper';
 
 
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://13.201.89.79';
 
 export default function MyRegistrationPage() {

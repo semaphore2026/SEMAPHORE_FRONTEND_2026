@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import PaymentSubmission from '@/components/payment/PaymentSubmission';
 import WaterWave from '@/components/WaterWaveWrapper';
+import Footer from '@/components/Footer';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://13.201.89.79';
 
@@ -61,7 +62,7 @@ export default function PaymentPage() {
   }
 
   return (
-    <main className="relative min-h-screen bg-black overflow-hidden flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <main className="relative min-h-screen bg-black overflow-hidden flex flex-col pt-12 px-4 sm:px-6 lg:px-8">
       {/* Decorative noise/texture overlay for the background */}
       <div className="absolute inset-0 bg-[url('/noise.png')] opacity-10 mix-blend-overlay pointer-events-none z-0"></div>
 
@@ -79,8 +80,9 @@ export default function PaymentPage() {
         </WaterWave>
       </div>
       
-      <div className="w-full max-w-6xl relative z-10 flex flex-col lg:flex-row items-stretch justify-center gap-8 lg:gap-12">
-        {/* Left side: QR Code */}
+      <div className="flex-grow flex items-center justify-center w-full z-10 relative">
+        <div className="w-full max-w-6xl flex flex-col lg:flex-row items-stretch justify-center gap-8 lg:gap-12 py-8">
+          {/* Left side: QR Code */}
         <div className="flex-1 flex flex-col items-center justify-center bg-black/40 backdrop-blur-xl border border-white/10 rounded-3xl p-8 shadow-sm">
           <h2 className="text-2xl font-extrabold text-white mb-6 tracking-wide uppercase text-center">Scan to Pay</h2>
           
@@ -108,6 +110,10 @@ export default function PaymentPage() {
         <div className="flex-1">
           <PaymentSubmission />
         </div>
+      </div>
+      </div>
+      <div className="w-full relative z-10 mt-auto">
+        <Footer />
       </div>
     </main>
   );
