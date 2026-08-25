@@ -3,26 +3,15 @@
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
-  Drawer,
-  DrawerClose,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
-} from "@/components/ui/drawer"
-import {
   Home,
-  KeyRound,
   User,
   FileEdit,
   BookOpen,
-  CircleDollarSign,
   Contact,
   Code,
   Calendar,
-  Menu as MenuIcon
+  Menu as MenuIcon,
+  X as CloseIcon
 } from "lucide-react"
 
 const menuItems = [
@@ -30,52 +19,78 @@ const menuItems = [
   { label: 'Login', icon: FileEdit, href: '/user/register' },
   { label: 'Brochure', icon: BookOpen, href: '#' },
   { label: 'Developers', icon: Code, href: '/developer' },
-  { label: 'Contact', icon: Contact, href: '/contact' },
+  { label: 'Contact', icon: Contact, href: '#infos' },
   { label: 'Events', icon: Calendar, href: '/events/register' },
   { label: 'Profile', icon: User, href: '/user/account' },
 ]
 
 export default function Menu() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsLoggedIn(!!localStorage.getItem('token'));
   }, []);
 
   return (
-    <Drawer showSwipeHandle>
-      <div className="fixed top-2 right-2 z-[100]">
-        <DrawerTrigger render={
+    <>
+      {/* Toggle Button */}
+      <div className="fixed top-4 right-4 md:top-8 md:right-10 z-[110]">
+        <div className="relative group">
+          <div className="absolute -inset-1.5 bg-cyan-400 rounded-2xl blur-md animate-pulse opacity-40 group-hover:opacity-75 transition duration-500 pointer-events-none"></div>
           <Button
             variant="secondary"
-            className="bg-[#0d1424]/80 hover:bg-[#0d1424]/90 aria-expanded:bg-[#0d1424]/90 aria-expanded:text-white text-white rounded-md px-5 py-5 flex items-center gap-2 font-medium text-lg transition-colors border-none"
+            onClick={() => setIsOpen(!isOpen)}
+            className="relative bg-[#020813]/40 hover:bg-[#020813]/60 backdrop-blur-md border border-cyan-400/30 hover:border-cyan-400/60 shadow-[0_0_15px_rgba(0,243,255,0.15)] hover:shadow-[0_0_25px_rgba(0,243,255,0.3)] text-cyan-300 hover:text-cyan-100 rounded-xl flex items-center justify-center transition-all w-14 h-14 p-0"
           >
-            Menu
-            <MenuIcon className="w-8  h-8 text-white" />
-          </Button>
-        } />
+          {isOpen ? (
+            <>
+          
+              <CloseIcon className="w-6 h-6 text-cyan-300" />
+            </>
+          ) : (
+            <>
+              
+              <MenuIcon className="w-6 h-6 text-cyan-300" />
+            </>
+          )}
+        </Button>
+        </div>
       </div>
-      <DrawerContent className="bg-black/40 backdrop-blur border-t border-white/10 text-white p-4">
-        <DrawerHeader className="text-center pt-2 pb-6">
-          <DrawerTitle className="text-2xl font-bold text-white">Semaphore 2K26</DrawerTitle>
-        </DrawerHeader>
-        <div className="flex flex-col gap-2 max-w-sm mx-auto w-full overflow-y-auto max-h-[70vh] no-scrollbar">
+
+      {/* Menu Items Container */}
+      {isOpen && (
+        <div className="fixed top-[88px] right-4 md:top-[104px] md:right-10 z-[100] flex flex-col gap-3 w-[220px]">
           {menuItems.filter(item => !(isLoggedIn && item.label === 'Login')).map((item, index) => {
             const Icon = item.icon
             return (
               <a
                 key={index}
                 href={item.href}
-                className="flex items-center gap-4 px-6 py-3.5 bg-[oklch(12.9%_0.042_264.695)] hover:bg-[oklch(27.7%_0.046_192.524)]  rounded-lg transition-colors duration-200"
+                style={{
+                  animationDelay: `${index * 50}ms`,
+                  animationFillMode: 'both'
+                }}
+                className="animate-slide-left-fade flex items-center gap-4 px-6 py-4 bg-[#020813]/60 backdrop-blur-md border border-cyan-400/20 hover:border-cyan-400/60 hover:bg-[#020813]/80 rounded-xl transition-all duration-300 shadow-[0_0_10px_rgba(0,243,255,0.05)] hover:shadow-[0_0_20px_rgba(0,243,255,0.2)] group"
               >
-                <Icon className="w-5 h-5 text-gray-200" />
-                <span className="font-semibold text-gray-100">{item.label}</span>
+                <Icon className="w-5 h-5 text-cyan-400 group-hover:scale-110 transition-transform" />
+                <span className="font-mono font-bold tracking-widest text-cyan-100 uppercase group-hover:text-white transition-colors">{item.label}</span>
               </a>
             )
           })}
         </div>
-      </DrawerContent>
-    </Drawer>
+      )}
+
+      {/* Custom Keyframes for stagger animation */}
+      <style dangerouslySetInnerHTML={{__html: `
+        @keyframes slideLeftFade {
+          from { opacity: 0; transform: translateX(100vw); }
+          to { opacity: 1; transform: translateX(0); }
+        }
+        .animate-slide-left-fade {
+          animation: slideLeftFade 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+      `}} />
+    </>
   )
 }
