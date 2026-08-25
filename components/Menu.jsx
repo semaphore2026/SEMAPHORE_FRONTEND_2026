@@ -36,13 +36,11 @@ export default function Menu() {
     <>
       {/* Toggle Button */}
       <div className="fixed top-4 right-4 md:top-8 md:right-10 z-[110]">
-        <div className="relative group">
-          <div className="absolute -inset-1 bg-cyan-400 rounded-2xl blur-md animate-pulse opacity-20 group-hover:opacity-40 transition duration-500 pointer-events-none"></div>
-          <Button
-            variant="secondary"
-            onClick={() => setIsOpen(!isOpen)}
-            className="relative bg-[#020813]/40 hover:bg-[#020813]/60 backdrop-blur-md border border-cyan-400/30 hover:border-cyan-400/60 shadow-[0_0_15px_rgba(0,243,255,0.15)] hover:shadow-[0_0_25px_rgba(0,243,255,0.3)] text-cyan-300 hover:text-cyan-100 rounded-xl flex items-center justify-center transition-all w-14 h-14 p-0"
-          >
+        <Button
+          variant="secondary"
+          onClick={() => setIsOpen(!isOpen)}
+          className="relative bg-[#020813]/40 hover:bg-[#020813]/60 backdrop-blur-md border border-cyan-400/30 hover:border-cyan-400/60 shadow-[0_0_15px_rgba(0,243,255,0.15)] hover:shadow-[0_0_25px_rgba(0,243,255,0.3)] text-cyan-300 hover:text-cyan-100 rounded-xl flex items-center justify-center transition-all w-14 h-14 p-0"
+        >
           {isOpen ? (
             <>
           
@@ -55,7 +53,6 @@ export default function Menu() {
             </>
           )}
         </Button>
-        </div>
       </div>
 
       {/* Menu Items Container */}
