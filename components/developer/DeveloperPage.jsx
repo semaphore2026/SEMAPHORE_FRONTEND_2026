@@ -143,7 +143,7 @@ export default function DeveloperPage() {
 
           <div className="flex flex-wrap justify-center gap-4 sm:gap-5 lg:gap-6 w-full">
             {developmentTeam.map((dev) => (
-              <DeveloperCard key={dev.id} dev={dev} imageErrorMap={imageErrorMap} handleImageError={handleImageError} hideAllContacts={true} />
+              <DeveloperCard key={dev.id} dev={dev} imageErrorMap={imageErrorMap} handleImageError={handleImageError} hideAllContacts={false} />
             ))}
           </div>
         </section>
