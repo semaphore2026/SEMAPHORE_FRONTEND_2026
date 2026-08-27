@@ -1,0 +1,58 @@
+import * as THREE from "three";
+
+export const aquariumHalfSize = new THREE.Vector3(11, 6.6, 8.5);
+export const aquariumFloorY = -aquariumHalfSize.y;
+export const waterLevelY = aquariumHalfSize.y - 0.72;
+
+export const fishConfig = {
+  radius: 0.6,
+  length: 1.6,
+  renderScale: 1,
+  radialSegments: 36,
+  heightSegments: 3,
+  highlightedIndex: 0,
+  bodyColor: new THREE.Color(0xf2f6ff),
+  highlightedColor: new THREE.Color(0xf2f6ff),
+  appearanceVariants: [
+    new THREE.Color(0xf2f6ff), // Cold white
+    new THREE.Color(0xff8a2a), // Orange
+    new THREE.Color(0xf7efe2), // Cream
+    new THREE.Color(0x8fa4ad), // Grey-blue
+  ],
+  renderBoundsRadius: 18,
+  swimFrequencyMin: 0.9,
+  swimFrequencyMax: 2.1,
+  swimTailBeatMinIntervalSeconds: 0.65,
+  maxBankAngle: THREE.MathUtils.degToRad(12),
+  bankTurnScale: 0.18,
+  bankResponse: 8,
+  curveDeformationStrength: 0.72,
+  curveDeformationMax: 2.35,
+  curveDeformationResponse: 12,
+  swimCurveStrength: 0.92,
+  swimAccelerationThreshold: 0.35,
+  swimAccelerationFull: 2.4,
+  swimAccelerationPulseSeconds: 0.32,
+  swimTurnCurveStart: 0.08,
+};
+
+export const simulationSettings = {
+  minSpeed: 3,
+  maxSpeed: 7.5,
+  maxTurnRate: 4,
+  perceptionRadius: 2.7,
+  avoidanceRadius: 1,
+  maxSteerForce: 3,
+  alignWeight: 1,
+  cohesionWeight: 1,
+  separateWeight: 1.35,
+  boundsRadius: 0.27,
+  avoidCollisionWeight: 10,
+  collisionAvoidDistance: 5,
+  boundaryWeight: 9,
+  boundaryMargin: 2,
+  topBoundaryMargin: 0.42,
+  bottomBoundaryMargin: 2,
+  horizontalBoundaryMargin: 2,
+};
+export const clownfishAvoidanceZones = [];

@@ -67,12 +67,12 @@ export default function EventInfoModal({ event, onClose }) {
       />
       
       {/* Dashboard Bottom Panel */}
-      <div className="animate-slide-up relative pointer-events-auto w-[90%] mx-auto h-auto min-h-[45vh] max-h-[60vh] p-6 md:p-8 bg-[#020813]/40 border-t border-cyan-400/60 border-l border-r border-cyan-400/30 rounded-t-[20px] shadow-[0_-5px_30px_rgba(0,243,255,0.15)] backdrop-blur-2xl flex flex-col md:flex-row gap-8 font-mono">
+      <div className="animate-slide-up relative pointer-events-auto w-full h-[100dvh] md:w-[90%] mx-auto md:h-auto md:min-h-[45vh] md:max-h-[60vh] p-6 pt-12 md:pt-6 md:p-8 bg-[#020813]/95 md:bg-[#020813]/40 border-t border-cyan-400/60 border-x-0 md:border-l md:border-r md:border-cyan-400/30 rounded-none md:rounded-t-[20px] shadow-[0_-5px_30px_rgba(0,243,255,0.15)] backdrop-blur-3xl md:backdrop-blur-2xl flex flex-col md:flex-row gap-6 md:gap-8 font-mono">
         
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-2 right-6 text-cyan-400 text-sm font-bold hover:text-white transition-colors"
+          className="absolute top-4 right-4 md:top-2 md:right-6 text-cyan-400 text-sm font-bold hover:text-white transition-colors z-50 bg-[#020813]/50 md:bg-transparent px-3 py-1 rounded-full md:rounded-none md:px-0 md:py-0"
         >
           [ CLOSE ✕ ]
         </button>

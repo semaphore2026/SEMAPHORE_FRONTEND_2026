@@ -17,6 +17,7 @@ import {
   FileEdit,
   BookOpen,
   Contact,
+  Info,
   Code,
   Calendar,
   X,
@@ -26,16 +27,16 @@ import {
 const menuItems = [
   { label: 'Home', icon: Home, href: '/' },
   { label: 'Login', icon: FileEdit, href: '/user/register' },
-  { label: 'Info', icon: BookOpen, href: '/info' },
   { label: 'Brochure', icon: BookOpen, href: '#' },
   { label: 'Developers', icon: Code, href: '/developer' },
-  { label: 'Contact', icon: Contact, href: '/contact' },
+  { label: 'Info', icon: Info, href: '/contact' },
   { label: 'Events', icon: Calendar, href: '/events/register' },
   { label: 'Profile', icon: User, href: '/user/account' },
 ]
 
 export default function Menu() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [open, setOpen] = useState(false);
   const isMobile = useIsMobile();
 
   useEffect(() => {
@@ -45,50 +46,66 @@ export default function Menu() {
 
   return (
     <Drawer
+      open={open}
+      onOpenChange={setOpen}
       showSwipeHandle={isMobile}
       swipeDirection={isMobile ? "down" : "right"}
     >
-      <div className="fixed top-2 right-2 z-[100]">
+      <div className="fixed top-3 right-3 z-[100]">
         <DrawerTrigger render={
           <Button
-            variant="secondary"
-            className="bg-[#0d1424]/80 hover:bg-[#0d1424]/90 aria-expanded:bg-[#0d1424]/90 aria-expanded:text-white text-white rounded-md px-5 py-5 flex items-center gap-2 font-medium text-lg transition-colors border-none"
+            variant="outline"
+            className="group relative bg-[#010c18]/80 hover:bg-cyan-950/60 text-cyan-300 hover:text-cyan-100 rounded-2xl border border-cyan-500/50 hover:border-cyan-400 p-5 w-16 h-16 flex items-center justify-center transition-all duration-300 shadow-[0_0_15px_rgba(0,255,255,0.2)] hover:shadow-[0_0_25px_rgba(0,255,255,0.5)] overflow-hidden backdrop-blur-md"
           >
-            Menu
-            <MenuIcon className="w-8  h-8 text-white" />
+            <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            {open ? (
+              <X className="w-8 h-8 text-cyan-400 group-hover:text-cyan-200 relative z-10 drop-shadow-[0_0_8px_rgba(0,255,255,0.8)] transition-colors" />
+            ) : (
+              <MenuIcon className="w-8 h-8 text-cyan-400 group-hover:text-cyan-200 relative z-10 drop-shadow-[0_0_8px_rgba(0,255,255,0.8)] transition-colors" />
+            )}
           </Button>
         } />
       </div>
-      <DrawerContent className="bg-black/40 backdrop-blur border-white/10 text-white p-4">
-        <DrawerHeader className="relative pt-2 pb-6 text-center">
-          <DrawerTitle className="text-2xl font-bold text-white">Semaphore 2K26</DrawerTitle>
-          {!isMobile && (
-            <DrawerClose render={
-              <Button
-                variant="ghost"
-                aria-label="Close menu"
-                className="absolute top-0 right-0 h-9 w-9 rounded-md p-0 text-gray-300 hover:bg-white/10 hover:text-white"
-              >
-                <X className="w-5 h-5" />
-              </Button>
-            } />
-          )}
+      <DrawerContent className="bg-transparent border-none shadow-none text-white p-4 font-mono">
+        <DrawerHeader className="sr-only">
+          <DrawerTitle>Menu</DrawerTitle>
         </DrawerHeader>
-        <nav className="flex min-h-0 flex-1 flex-col gap-2 w-full max-w-sm mx-auto overflow-y-auto no-scrollbar md:max-w-none">
+        <nav className="flex min-h-0 flex-1 flex-col gap-3 w-full max-w-sm mx-auto overflow-y-auto no-scrollbar md:max-w-none px-2 pb-4 mt-6 md:mt-24">
           {menuItems.filter(item => !(isLoggedIn && item.label === 'Login')).map((item, index) => {
             const Icon = item.icon
             return (
               <a
                 key={index}
                 href={item.href}
-                className="flex items-center gap-4 px-6 py-3.5 bg-[oklch(12.9%_0.042_264.695)] hover:bg-[oklch(27.7%_0.046_192.524)]  rounded-lg transition-colors duration-200"
+                className="group relative flex items-center gap-4 px-6 py-4 bg-[#010c18]/90 backdrop-blur-md hover:bg-cyan-950/60 border border-cyan-400/10 hover:border-cyan-400/60 rounded-2xl transition-all duration-300 overflow-hidden"
+                style={{ 
+                  animation: `menuFadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards ${index * 0.08}s`,
+                  opacity: 0 
+                }}
               >
-                <Icon className="w-5 h-5 text-gray-200" />
-                <span className="font-semibold text-gray-100">{item.label}</span>
+                {/* Tech hover effects */}
+                <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                <div className="absolute top-0 left-0 w-2 h-2 border-t-2 border-l-2 border-cyan-400 opacity-0 group-hover:opacity-100 transition-all duration-300" />
+                <div className="absolute bottom-0 right-0 w-2 h-2 border-b-2 border-r-2 border-cyan-400 opacity-0 group-hover:opacity-100 transition-all duration-300" />
+                
+                <Icon className="w-5 h-5 text-cyan-500/70 group-hover:text-cyan-300 group-hover:drop-shadow-[0_0_8px_rgba(0,255,255,0.8)] transition-all relative z-10" />
+                <span className="font-bold text-gray-300 group-hover:text-white tracking-[0.15em] uppercase text-sm relative z-10">
+                  {item.label}
+                </span>
+                
+                <span className="ml-auto text-cyan-400 opacity-0 group-hover:opacity-100 transition-opacity font-black relative z-10 tracking-widest">
+                  {'>'}
+                </span>
               </a>
             )
           })}
         </nav>
+        <style dangerouslySetInnerHTML={{__html: `
+          @keyframes menuFadeInUp {
+            from { opacity: 0; transform: translateY(30px) scale(0.95); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+          }
+        `}} />
       </DrawerContent>
     </Drawer>
   )

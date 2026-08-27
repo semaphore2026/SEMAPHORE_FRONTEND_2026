@@ -6,9 +6,11 @@ import WaterWave from "../WaterWaveWrapper";
 import Footer from "../Footer";
 import DeveloperCard from "../developer/DeveloperCard";
 import { staffCoordinators, studentCoordinators } from "../developer/developersData";
+import eventsData from "../../data/events.json";
 
 export default function ContactPage() {
   const [imageErrorMap, setImageErrorMap] = useState({});
+  const generalRulesData = eventsData.find(e => e.id === "general-rules");
 
   const handleImageError = (id) => {
     setImageErrorMap((prev) => ({ ...prev, [id]: true }));
@@ -188,6 +190,39 @@ export default function ContactPage() {
             </div>
           </div>
         </section>
+
+        {/* General Rules Section */}
+        {generalRulesData && (
+          <section className="relative w-full max-w-7xl mx-auto px-4 sm:px-6 z-20 mb-20 font-mono">
+            <div className="flex flex-col items-center text-center mb-8 sm:mb-12">
+              <div className="inline-flex items-center space-x-2 bg-cyan-900/30 border border-cyan-400/30 px-3 py-1 rounded-full mb-4 backdrop-blur-sm">
+                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_#00dbe9]" />
+                <span className="text-[10px] font-bold text-cyan-300 tracking-[0.2em] uppercase">
+                  {generalRulesData.category}
+                </span>
+                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_#00dbe9]" />
+              </div>
+
+              <h2 className="text-3xl sm:text-4xl md:text-5xl font-black font-sans tracking-[0.15em] text-transparent bg-clip-text bg-gradient-to-b from-white to-cyan-200 uppercase drop-shadow-[0_0_20px_rgba(0,219,233,0.5)] mb-4">
+                {generalRulesData.name}
+              </h2>
+              <p className="text-cyan-200/80 text-sm max-w-2xl mx-auto">
+                {generalRulesData.description}
+              </p>
+            </div>
+
+            <div className="bg-white/5 border border-white/10 border-t-white/20 border-l-white/20 rounded-3xl p-6 sm:p-8 md:p-10 backdrop-blur-xl shadow-[0_15px_40px_rgba(0,0,0,0.5),inset_0_0_30px_rgba(255,255,255,0.03)] mx-auto max-w-4xl">
+              <ul className="space-y-4 text-white/80 list-none">
+                {generalRulesData.rules.map((rule, idx) => (
+                  <li key={idx} className="flex items-start space-x-3 text-sm sm:text-base leading-relaxed tracking-wide">
+                    <span className="text-cyan-400 mt-0.5">▹</span>
+                    <span>{rule}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </section>
+        )}
       </main>
 
       <Footer />

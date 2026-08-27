@@ -132,15 +132,11 @@
   pointer-events: none;
   z-index: 40;
   opacity: 0;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  transition: opacity 1.2s ease, backdrop-filter 2s ease, -webkit-backdrop-filter 2s ease;
+  transition: opacity 1.2s ease;
 }
 
 .ui-layer.visible {
   opacity: 1;
-  backdrop-filter: blur(0px);
-  -webkit-backdrop-filter: blur(0px);
 }
 
 /* Grid overlay */
