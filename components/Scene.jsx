@@ -6,10 +6,10 @@ import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader.js";
 import { Water } from "three/examples/jsm/objects/Water.js";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import Loader from "./Loader";
+import { usePreload } from "@/components/preload/PreloadProvider";
 import EventInfoModal from "./EventInfoModal";
 import { Info } from "lucide-react";
-import { CRITICAL_ASSETS, loadAssets, blobToTexture } from "./assetLoader";
+import { CRITICAL_ASSETS, loadAssets, blobToTexture, releaseAssets } from "./assetLoader";
 import { FishSchoolSimulation } from "./fish/fish-school-simulation";
 import { createClownfishSchool } from "./fish/clownfish-school";
 import { loadFishModel } from "./fish/model-loader";
@@ -592,11 +592,12 @@ export default function Scene() {
   const userMutedRef = useRef(false);
   const [activeEvent, setActiveEvent] = useState("event-1");
 
-  const [progress, setProgress] = useState(0);
   const [scrollProgress, setScrollProgress] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState(null);
-  const [retryToken, setRetryToken] = useState(0);
+
+  // The full-screen loader and its Retry button live in <PreloadProvider>, above the
+  // whole app. This component only claims a readiness gate and reports how far along
+  // its own post-download work (parse -> upload -> compile -> first frame) is.
+  const { register, retryToken } = usePreload();
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [hoveredNode, setHoveredNode] = useState(null);
@@ -4701,14 +4702,22 @@ export default function Scene() {
     // every critical asset is decoded, applied to the scene, and a complete frame
     // has actually been rendered — which is what prevents texture/model pop-in.
     (async () => {
+      // "scene" is pre-declared for "/" in constants/preloadManifest.js, so the gate
+      // cannot reveal the page in the window between the bytes landing and this
+      // component registering.
+      const gate = register("scene");
       try {
+        // The preload gate is already fetching these exact bytes; assetLoader dedupes
+        // the in-flight request, so this resolves without a second download. Progress
+        // for the transfer belongs to the gate, hence the no-op callback here.
         const { results, failures } = await loadAssets(
           CRITICAL_ASSETS,
-          (pct) => setProgress(pct),
+          () => {},
           abortController.signal
         );
 
         if (sceneDisposed) return;
+        gate.report(0.15);
 
         if (failures.length > 0) {
           failures.forEach((f) =>
@@ -4717,7 +4726,7 @@ export default function Scene() {
           // Only block the experience if something the first frame truly needs is missing.
           const fatal = failures.some((f) => f.asset.kind === "texture");
           if (fatal) {
-            setLoadError(
+            gate.fail(
               `${failures.length} ocean asset${failures.length > 1 ? "s" : ""} could not be loaded.`
             );
             return;
@@ -4732,13 +4741,22 @@ export default function Scene() {
           waterNormals.needsUpdate = true;
         }
 
+        gate.report(0.3);
+
         if (results.dolphin) {
           await buildDolphinsFromBuffer(await results.dolphin.arrayBuffer());
         }
 
+        gate.report(0.45);
+
         if (results.fishSchool) {
           await buildFishSchoolFromBuffer(await results.fishSchool.arrayBuffer());
         }
+
+        // The geometry is on the GPU now, so ~34MB of Blob is pure waste in memory.
+        // A retry re-reads it from the Cache API (disk), not the network.
+        releaseAssets(["dolphin", "fishSchool"]);
+        gate.report(0.75);
 
         if (sceneDisposed) return;
 
@@ -4775,6 +4793,7 @@ export default function Scene() {
         await loadHdrEnvPromise();
 
         if (sceneDisposed) return;
+        gate.report(0.9);
 
         // Force a full render so every material/shader is compiled and uploaded
         // BEFORE the curtain lifts, rather than hitching on the first visible frame.
@@ -4805,14 +4824,13 @@ export default function Scene() {
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {
             if (sceneDisposed) return;
-            setProgress(100);
-            setLoading(false);
+            gate.done();
           });
         });
       } catch (err) {
         if (err && err.name === "AbortError") return;
         console.error("[Aquasaga] preload failed:", err);
-        if (!sceneDisposed) setLoadError("Could not load the ocean environment.");
+        if (!sceneDisposed) gate.fail("Could not load the ocean environment.");
       }
     })();
 
@@ -4920,8 +4938,9 @@ export default function Scene() {
       renderer.dispose();
       renderer.forceContextLoss();
     };
-    // retryToken lets the Retry button tear down and rebuild the whole scene.
-  }, [retryToken]);
+    // retryToken lets the provider's Retry button tear down and rebuild the whole
+    // scene; `register` is stable across renders.
+  }, [retryToken, register]);
 
   const hudVisible = scrollProgress >= 4;
   const isInsideNewWorld = scrollProgress > 42;
@@ -4929,19 +4948,7 @@ export default function Scene() {
   return (
     <>
       <div ref={wrapperRef} style={{ height: "1600vh", position: "relative", backgroundColor: "#011728" }}>
-        {/* Custom Loader */}
-        <Loader
-          loading={loading}
-          progress={progress}
-          error={loadError}
-          onRetry={() => {
-            setLoadError(null);
-            setProgress(0);
-            setLoading(true);
-            setRetryToken((n) => n + 1);
-          }}
-        />
-
+        {/* The loader overlay lives in <PreloadProvider>, above the whole app. */}
 
         {/* 3D Canvas Container */}
         <div ref={containerRef} style={{ position: "sticky", top: 0, width: "100vw", height: "100vh", overflow: "hidden" }}>

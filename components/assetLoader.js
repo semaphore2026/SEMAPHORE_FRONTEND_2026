@@ -1,6 +1,6 @@
 "use client";
 
-// Centralized asset loading for the Aquasaga ocean scene.
+// Centralized asset loading for the Aquasaga ocean scene and the site-wide preload gate.
 //
 // Why this exists: THREE.LoadingManager reports progress as itemsLoaded/itemsTotal,
 // which counts FILES, not bytes. With five critical assets that produced a counter
@@ -10,6 +10,12 @@
 //
 // It also gives us one place to do application-level caching (Cache API), so a repeat
 // visit reuses stored bytes instead of re-downloading megabytes of models/textures.
+//
+// Supported `kind` values:
+//   "buffer"  - binary payload (GLB) handed back as a Blob
+//   "texture" - image bytes the caller decodes into a THREE texture
+//   "image"   - a DOM image the page will render; decoded here so first paint has no jank
+//   "fonts"   - pseudo-asset: resolves when document.fonts is ready (one weighted unit)
 
 const CACHE_NAME = "aquasaga-assets-v1";
 
@@ -21,9 +27,12 @@ export const ASSET_VERSION = "v1";
  * Assets required before the first frame can be rendered correctly.
  * `bytes` is only a seed estimate for the progress total; the real
  * Content-Length replaces it as soon as response headers arrive.
+ *
+ * `critical: true` means the preload gate must surface an error if it fails,
+ * rather than revealing a visibly broken page.
  */
 export const CRITICAL_ASSETS = [
-  { key: "waterNormals", url: "/textures/waternormals.jpg", kind: "texture", bytes: 249000 },
+  { key: "waterNormals", url: "/textures/waternormals.jpg", kind: "texture", bytes: 249000, critical: true },
   { key: "dolphin", url: "/assets/models/dolphin_anim.glb", kind: "buffer", bytes: 146000 },
   { key: "fishSchool", url: "/assets/models/source/school%20of%20fish_opt.glb", kind: "buffer", bytes: 34440000 },
 ];
@@ -32,6 +41,35 @@ export const CRITICAL_ASSETS = [
 export const SECONDARY_ASSETS = [
   { key: "hdri", url: "/hdri/spiaggia_di_mondello_1k.hdr", kind: "buffer", bytes: 1533242 },
 ];
+
+// ---------------------------------------------------------------------------
+// Cross-consumer deduplication
+//
+// The preload gate and <Scene> both ask for CRITICAL_ASSETS. `assetStore` stops a
+// second sequential download; `inflight` stops a second CONCURRENT one (the gate
+// starts fetching on mount, Scene starts a few milliseconds later). Without the
+// in-flight map the 34MB fish model would be pulled twice on every cold visit.
+// ---------------------------------------------------------------------------
+const assetStore = new Map(); // key -> Blob
+const inflight = new Map(); // url -> Promise<Blob>
+
+/** Bytes already fetched this session, for consumers that want them without re-running loadAssets. */
+export function getAsset(key) {
+  return assetStore.get(key) || null;
+}
+
+/**
+ * Drop payloads once a consumer no longer needs the raw bytes. The 34MB fish GLB is
+ * pure waste in memory after its meshes exist on the GPU; a retry re-reads it from
+ * the Cache API (disk), not the network.
+ */
+export function releaseAssets(keys) {
+  for (const key of keys) assetStore.delete(key);
+}
+
+export function clearAssetStore() {
+  assetStore.clear();
+}
 
 async function openCache() {
   try {
@@ -43,12 +81,16 @@ async function openCache() {
 }
 
 /**
- * Fetch one asset, reporting bytes as they stream in.
- * Resolves to a Blob. Uses the Cache API so repeat visits skip the network.
+ * Fetch one asset over the network, reporting bytes as they stream in.
+ *
+ * `useCache` is off for DOM images on purpose: the Cache API entry is keyed by
+ * url + ASSET_VERSION, which is NOT the URL an img/background-image later
+ * requests, so storing it there would guarantee a second download. A plain fetch
+ * of the real URL warms the HTTP cache that the render path actually uses.
  */
-async function fetchAsset(asset, onBytes, signal) {
+async function fetchOverNetwork(asset, onBytes, signal, useCache) {
   const cacheKey = asset.url + "?" + ASSET_VERSION;
-  const cache = await openCache();
+  const cache = useCache ? await openCache() : null;
 
   // --- Repeat visit: serve straight from the cache ---
   if (cache) {
@@ -96,6 +138,111 @@ async function fetchAsset(asset, onBytes, signal) {
   return blob;
 }
 
+/** Fetch one asset, deduplicated across every consumer in the app. Resolves to a Blob. */
+async function fetchAsset(asset, onBytes, signal) {
+  const held = assetStore.get(asset.key);
+  if (held) {
+    onBytes(held.size, held.size, true);
+    return held;
+  }
+
+  // Someone else is already downloading these exact bytes — ride along.
+  // (A rider gets no incremental ticks, only the final size, because the stream is
+  // being consumed by the first caller. The first caller is the one driving the
+  // visible progress bar, so this is invisible in practice.)
+  const pending = inflight.get(asset.url);
+  if (pending) {
+    try {
+      const blob = await pending;
+      onBytes(blob.size, blob.size, true);
+      return blob;
+    } catch (err) {
+      // The initiator gave up — typically it unmounted and aborted its controller.
+      // If OUR caller was not the one cancelled, fetch the bytes ourselves instead of
+      // inheriting somebody else's abort.
+      if (signal && signal.aborted) throw err;
+    }
+  }
+
+  const useCache = asset.kind !== "image";
+  const promise = fetchOverNetwork(asset, onBytes, signal, useCache);
+  inflight.set(asset.url, promise);
+
+  try {
+    const blob = await promise;
+    assetStore.set(asset.key, blob);
+    return blob;
+  } finally {
+    inflight.delete(asset.url);
+  }
+}
+
+/**
+ * Decode a DOM image so the browser has pixels ready before the page is revealed.
+ * Decodes the real URL (not a blob: URL) so the decoded frame is the one the page's
+ * own img/background-image will hit.
+ */
+async function decodeImage(url, blob) {
+  if (typeof Image === "undefined") return;
+  try {
+    const img = new Image();
+    img.decoding = "async";
+    img.src = url;
+    if (typeof img.decode === "function") {
+      await img.decode();
+      return;
+    }
+    await new Promise((resolve) => {
+      img.onload = resolve;
+      img.onerror = resolve;
+    });
+  } catch {
+    // Decoding must never block the gate. Fall back to decoding the bytes we already
+    // hold; if even that fails the browser simply decodes at paint time as before.
+    if (blob && typeof createImageBitmap === "function") {
+      try {
+        const bitmap = await createImageBitmap(blob);
+        if (bitmap.close) bitmap.close();
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+}
+
+/**
+ * Resolve once webfonts are ready, so text does not reflow after the reveal.
+ * globals.css pulls Orbitron + Share Tech Mono from Google Fonts and layout.jsx
+ * loads Geist via next/font; document.fonts.ready covers both.
+ */
+export async function awaitFonts(timeoutMs = 8000) {
+  if (typeof document === "undefined" || !document.fonts) return;
+  try {
+    await Promise.race([
+      document.fonts.ready,
+      new Promise((resolve) => setTimeout(resolve, timeoutMs)),
+    ]);
+  } catch {
+    /* a font that never arrives must not hold the page hostage */
+  }
+}
+
+/** Fetch (or await) a single manifest entry, whatever kind it is. */
+async function loadUnit(asset, onBytes, signal) {
+  const weight = asset.bytes || 1;
+
+  if (asset.kind === "fonts") {
+    onBytes(0, weight, false);
+    await awaitFonts();
+    onBytes(weight, weight, false);
+    return null;
+  }
+
+  const blob = await fetchAsset(asset, onBytes, signal);
+  if (asset.kind === "image") await decodeImage(asset.url, blob);
+  return blob;
+}
+
 /**
  * Load a list of assets in parallel with true byte-level aggregate progress.
  *
@@ -139,7 +286,7 @@ export async function loadAssets(assets, onProgress, signal) {
   await Promise.all(
     state.map(async (s) => {
       try {
-        const blob = await fetchAsset(
+        const blob = await loadUnit(
           s.asset,
           (loaded, total, fromCache) => {
             s.loaded = loaded;
@@ -149,7 +296,7 @@ export async function loadAssets(assets, onProgress, signal) {
           },
           signal
         );
-        results[s.asset.key] = blob;
+        if (blob) results[s.asset.key] = blob;
       } catch (err) {
         failures.push({ asset: s.asset, error: err });
         // Treat a failed asset as "settled" so the bar cannot hang forever.
@@ -194,6 +341,7 @@ export async function blobToTexture(THREE, blob, { srgb = true, anisotropy = 1 }
 
 /** Clear cached asset bytes (useful when ASSET_VERSION changes). */
 export async function clearAssetCache() {
+  clearAssetStore();
   try {
     if (typeof caches !== "undefined") await caches.delete(CACHE_NAME);
   } catch {

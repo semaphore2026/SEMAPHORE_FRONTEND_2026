@@ -1,6 +1,9 @@
 "use client";
 
 import React from "react";
+// Internal links go through next/link: a full page load would tear down the app and
+// replay the whole preload gate instead of doing a client-side navigation.
+import Link from "next/link";
 
 export default function Footer() {
   return (
@@ -36,16 +39,16 @@ export default function Footer() {
                 NAVIGATE
               </h4>
               <ul className="space-y-2.5 text-xs text-cyan-100/70">
-                <li><a href="/" className="hover:text-cyan-300 transition-colors">Surface Home</a></li>
-                <li><a href="/events/register" className="hover:text-cyan-300 transition-colors">Events & Competitions</a></li>
+                <li><Link href="/" className="hover:text-cyan-300 transition-colors">Surface Home</Link></li>
+                <li><Link href="/events/register" className="hover:text-cyan-300 transition-colors">Events & Competitions</Link></li>
                 <li><a href="https://nitte.edu.in/nmamit/department-mca.php" target="_blank" rel="noopener noreferrer" className="hover:text-cyan-300 transition-colors">About MCA Department</a></li>
                 <li>
-                  <a
+                  <Link
                     href="/contact"
                     className="hover:text-cyan-300 transition-colors text-cyan-300/90 font-bold"
                   >
                     Contact & Support →
-                  </a>
+                  </Link>
                 </li>
               </ul>
             </div>

@@ -760,3 +760,20 @@
     display: none;
   }
 }
+
+/* --- Preload gate --------------------------------------------------------
+   app/layout.jsx stamps `preloading` on <html> from an inline script before the
+   body is parsed, so the page is hidden and scroll-locked from the first paint.
+   PreloadProvider removes the class once its reveal timeline finishes.
+
+   No `!important` anywhere below, on purpose: GSAP writes inline opacity onto
+   .preload-content to fade the page in, and inline styles outrank these rules —
+   which lets the fade run while the scroll lock is still held. */
+.preloading,
+.preloading body {
+  overflow: hidden;
+}
+
+.preloading .preload-content {
+  opacity: 0;
+}
