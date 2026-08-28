@@ -26,12 +26,13 @@ import {
 
 const menuItems = [
   { label: 'Home', icon: Home, href: '/' },
+   { label: 'Info', icon: BookOpen, href: '#' },
 { 
-  label: 'Info', 
+  label: 'Brochure', 
   icon: BookOpen, 
   href: 'https://drive.google.com/drive/folders/10TI0S_y-zrwvnXzYgdP_TbtJpKcFNQuM?usp=drive_link',
   target: '_blank'
-},  { label: 'Brochure', icon: BookOpen, href: '#' },
+},  
   { label: 'Developers', icon: Code, href: '/developer' },
   { label: 'Events', icon: Calendar, href: '/events/register' },
   { label: 'Rules', icon: BookOpen, href: '/rules' },
