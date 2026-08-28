@@ -133,16 +133,18 @@
     "name": "Narcissa",
     "category": "Fashin Show",
     "description": "Only the Boldest can own the Depths",
-    "rules": [
-    "The team must have a minimum of 4 members and a maximum of 8 members.",
-    "The time limit is 4+1. Timing starts as soon as the team enters the stage.",
-    "Any dance style is allowed, including Eastern, Western, or Fusion.",
-    "Performances must not contain any vulgarity, offensive gestures, or content targeting any community or religion.",
-    "No extra preparation time will be given on stage.",
-    "Props are allowed but must be safe and manageable by the team. Participants are responsible for bringing and handling their own props.",
-    "Teams must submit their audio track in MP3 format 2 days before the event.",
-    "The decision of the judges will be final."
-  ],
+  "rules": [
+  "Each team must consist of 2 members",
+  "Each team gets 2+1 minutes on stage",
+  "Outfits must follow a corporate/professional theme",
+  "Participants can experiment with formal wear, business casual, modern office fashion, and power dressing",
+  "Both members should have some coordination in their outfits, colours, styling, or overall concept",
+  "Confidence, posture, walking style, and presentation will be judged",
+  "Outfits must be suitable for a college event and maintain a professional appearance",
+  "Teams must submit selected ramp walk songs/music in advance",
+  "Teams must report to the venue before their assigned time",
+  "The judges decision will be final"
+],
     "heads": ["Prapthi Shetty - 9632081932", "Prathiksha - 9483505763"],
     "participants": 2
   },
