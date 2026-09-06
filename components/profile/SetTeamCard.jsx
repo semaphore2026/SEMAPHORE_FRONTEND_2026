@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://13.201.89.79';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://api.semaphore2k26.in';
 
 export default function SetTeamCard({ user, onUserUpdate }) {
   const [teamName, setTeamName] = useState("");
