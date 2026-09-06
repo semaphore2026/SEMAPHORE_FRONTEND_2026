@@ -9,7 +9,7 @@ import WaterWave from '@/components/WaterWaveWrapper';
 import Footer from '@/components/Footer';
 
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://13.201.89.79';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://api.semaphore2k26.in';
 
 export default function MyRegistrationPage() {
   const [user, setUser] = useState(null);

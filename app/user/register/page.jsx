@@ -6,7 +6,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import WaterWave from '@/components/WaterWaveWrapper';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://13.201.89.79';
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://api.semaphore2k26.in';
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '168801764074-kcn9c9to0daenc3o5pn9nfutgho8pcin.apps.googleusercontent.com';
 
 import { Suspense } from 'react';
