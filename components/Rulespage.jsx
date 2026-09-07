@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import Footer from "./Footer";
 import WaterWave from "./WaterWaveWrapper";
 
+
 export default function RulePage() {
   const [rules, setRules] = useState([]);
   const [loading, setLoading] = useState(true);
