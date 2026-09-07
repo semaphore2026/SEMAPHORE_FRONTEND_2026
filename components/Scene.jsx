@@ -4483,60 +4483,61 @@ export default function Scene() {
         }
       });
 
+      if (crabData) {
+        if (crabData.mixer) crabData.mixer.update(delta);
+
+        crabData.timer -= delta;
+        if (crabData.timer <= 0) {
+          if (crabData.state === 'idle') {
+            crabData.state = 'moving';
+            crabData.timer = 2 + Math.random() * 3;
+            // Restrict angle to 0 - PI so sin(angle) is positive, keeping the crab 
+            // strictly moving towards +Z (forward along the steps) and NEVER into the portal (-Z)
+            const angle = Math.random() * Math.PI;
+            const radius = 2 + Math.random() * 8; // Widened radius to use the full step width
+            crabData.targetPos.set(
+              crabData.originPos.x + Math.cos(angle) * radius,
+              crabData.originPos.y,
+              crabData.originPos.z + Math.sin(angle) * (radius * 0.4) // Flattened Z range so it doesn't fall off the steps
+            );
+            if (crabData.walkAction) { crabData.walkAction.reset(); crabData.walkAction.play(); }
+            if (crabData.idleAction) crabData.idleAction.stop();
+          } else {
+            crabData.state = 'idle';
+            crabData.timer = 2 + Math.random() * 3;
+            if (crabData.walkAction) crabData.walkAction.stop();
+            if (crabData.idleAction) { crabData.idleAction.reset(); crabData.idleAction.play(); }
+          }
+        }
+
+        if (crabData.state === 'moving') {
+          const mesh = crabData.mesh;
+          const target = crabData.targetPos;
+          const dir = new THREE.Vector3().subVectors(target, mesh.position);
+          dir.y = 0;
+          const dist = dir.length();
+
+          if (dist > 0.1) {
+            dir.normalize();
+            const targetAngle = Math.atan2(dir.x, dir.z);
+            // "Derecha" (animation 0) means sidestep right. Crab's forward vector should be 90deg offset from movement.
+            const desiredRot = targetAngle + Math.PI / 2;
+            const diff = desiredRot - mesh.rotation.y;
+            const normDiff = Math.atan2(Math.sin(diff), Math.cos(diff));
+            mesh.rotation.y += normDiff * delta * 4.0;
+
+            mesh.position.addScaledVector(dir, crabData.speed * delta);
+          } else {
+            crabData.timer = 0; // force idle
+          }
+        }
+      }
+
       allDolphins.forEach((dolphin, idx) => {
         if (dolphin.mixer) {
           dolphin.mixer.update(delta);
         }
 
-        if (crabData) {
-          if (crabData.mixer) crabData.mixer.update(delta);
-
-          crabData.timer -= delta;
-          if (crabData.timer <= 0) {
-            if (crabData.state === 'idle') {
-              crabData.state = 'moving';
-              crabData.timer = 2 + Math.random() * 3;
-              // Restrict angle to 0 - PI so sin(angle) is positive, keeping the crab 
-              // strictly moving towards +Z (forward along the steps) and NEVER into the portal (-Z)
-              const angle = Math.random() * Math.PI;
-              const radius = 1 + Math.random() * 4;
-              crabData.targetPos.set(
-                crabData.originPos.x + Math.cos(angle) * radius,
-                crabData.originPos.y,
-                crabData.originPos.z + Math.sin(angle) * radius
-              );
-              if (crabData.walkAction) { crabData.walkAction.reset(); crabData.walkAction.play(); }
-              if (crabData.idleAction) crabData.idleAction.stop();
-            } else {
-              crabData.state = 'idle';
-              crabData.timer = 2 + Math.random() * 3;
-              if (crabData.walkAction) crabData.walkAction.stop();
-              if (crabData.idleAction) { crabData.idleAction.reset(); crabData.idleAction.play(); }
-            }
-          }
-
-          if (crabData.state === 'moving') {
-            const mesh = crabData.mesh;
-            const target = crabData.targetPos;
-            const dir = new THREE.Vector3().subVectors(target, mesh.position);
-            dir.y = 0;
-            const dist = dir.length();
-
-            if (dist > 0.1) {
-              dir.normalize();
-              const targetAngle = Math.atan2(dir.x, dir.z);
-              // "Derecha" (animation 0) means sidestep right. Crab's forward vector should be 90deg offset from movement.
-              const desiredRot = targetAngle + Math.PI / 2;
-              const diff = desiredRot - mesh.rotation.y;
-              const normDiff = Math.atan2(Math.sin(diff), Math.cos(diff));
-              mesh.rotation.y += normDiff * delta * 4.0;
-
-              mesh.position.addScaledVector(dir, crabData.speed * delta);
-            } else {
-              crabData.timer = 0; // force idle
-            }
-          }
-        }
 
         // Pod offset formation vectors (Leader + Left Wing + Right Wing)
         let offFwd = 0;
@@ -5340,9 +5341,14 @@ export default function Scene() {
                   className="w-[80vw] max-w-[600px] h-auto object-contain relative z-10 drop-shadow-[0_0_25px_rgba(0,255,255,0.4)] hover:scale-105 transition-transform duration-700"
                 />
               </div>
-              <span className="font-mono text-xs md:text-sm tracking-[0.3em] text-cyan-50 uppercase font-bold drop-shadow-[0_2px_5px_rgba(0,0,0,1)]">
-                NATIONAL LEVEL MCA TECH FEST - NMAMIT NITTE
-              </span>
+              <div className="flex flex-col items-center gap-3 text-center">
+                <span className="font-mono text-xs md:text-sm tracking-[0.2em] md:tracking-[0.25em] text-cyan-300 uppercase font-semibold drop-shadow-[0_2px_5px_rgba(0,0,0,1)]">
+                  17-18 SEPTEMBER 2026
+                </span>
+                <span className="font-mono text-sm md:text-base tracking-[0.2em] md:tracking-[0.25em] text-cyan-50 uppercase font-bold drop-shadow-[0_2px_5px_rgba(0,0,0,1)]">
+                  NATIONAL LEVEL MCA TECH FEST - NMAMIT NITTE
+                </span>
+              </div>
 
             </main>
 
