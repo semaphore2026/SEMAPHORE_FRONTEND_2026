@@ -148,11 +148,11 @@
     "category": "Photography",
     "description": "Enter the tagline/description here",
     "rules": [
-      "1 participant from team",
-      " DSLR or mirrorless cameras only.",
-      "Shot on the NMAMIT Nitte campus.",
-      "1 raw photo, 1 raw video, and 1 edited video should be submitted"
-    ],
+    "Participants & Equipment: 1 participant per entry. DSLR/mirrorless cameras and smartphones are allowed.",
+    "Location: All content must be captured within the NMAMIT Nitte campus.",
+    "Content Policy: AI-generated content, stock/pre-shot content, or AI-based replacements are strictly prohibited and may lead to disqualification.",
+    "Originality: All submitted content must be captured during the event and must be the participant’s own work."
+  ],
     "heads": [
       "Goutam Hegde - 9242288471",
       "Bhargavi Pai - 9632081787"
@@ -160,9 +160,9 @@
     "participants": 1
   },
   {
-    "id": "Narcissa",
-    "name": "Narcissa",
-    "category": "Fashin Show",
+    "id": "Tide&Tailor",
+    "name": "Tide & Tailor",
+    "category": "Fashion Show",
     "description": "Only the Boldest can own the Depths",
     "rules": [
       "Each team must consist of 2 members",
