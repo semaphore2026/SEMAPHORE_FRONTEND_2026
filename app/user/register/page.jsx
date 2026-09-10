@@ -19,6 +19,7 @@ function UserRegisterContent() {
   const [customCollege, setCustomCollege] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [toast, setToast] = useState({ show: false, message: '' });
   const [scriptReady, setScriptReady] = useState(false);
   const gisBtnRef = useRef(null);
   const router = useRouter();
@@ -69,7 +70,15 @@ if (list.length > 0) setCollegeName(list[0]);
       const redirectUrl = searchParams.get('redirect');
       router.push(redirectUrl ? decodeURIComponent(redirectUrl) : '/user/account');
     } catch (err) {
-      setError(err.message);
+      const isDuplicate = err.message && (err.message.includes('E11000 duplicate key error') || err.message.includes('reached the maximum limit'));
+      if (isDuplicate) {
+        const friendlyMsg = 'A team from this college has already registered. Only one team per college is permitted.';
+        setError(null); // Clear inline error
+        setToast({ show: true, message: friendlyMsg });
+        setTimeout(() => setToast({ show: false, message: '' }), 5000);
+      } else {
+        setError(err.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -137,7 +146,7 @@ if (list.length > 0) setCollegeName(list[0]);
             {/* Futuristic Label Badge */}
             <div className="inline-flex items-center space-x-2 px-4 py-1.5 rounded-full bg-black/40 border border-cyan-500/30 text-cyan-300 text-[10px] font-mono tracking-[0.25em] uppercase shadow-[0_0_15px_rgba(0,219,233,0.2)] backdrop-blur-md">
               <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping shadow-[0_0_6px_#00dbe9]" />
-              <span>SEMAPHORE 2K26 // AUTH</span>
+              <span>SEMAPHORE 2K26 </span>
             </div>
 
             <div className="text-center">
@@ -224,6 +233,18 @@ if (list.length > 0) setCollegeName(list[0]);
           </div>
         </div>
       </main>
+
+      {/* Simple Custom Toast */}
+      <div 
+        className={`fixed top-8 left-1/2 -translate-x-1/2 z-50 transition-all duration-500 transform ${
+          toast.show ? 'translate-y-0 opacity-100 scale-100' : '-translate-y-8 opacity-0 scale-95 pointer-events-none'
+        }`}
+      >
+        <div className="bg-red-500/90 backdrop-blur-md border border-red-400 text-white px-6 py-3 rounded-full shadow-[0_10px_40px_rgba(220,38,38,0.4)] flex items-center space-x-3 max-w-[90vw] text-center text-sm md:text-base font-semibold">
+          <span className="text-xl">⚠</span>
+          <span>{toast.message}</span>
+        </div>
+      </div>
     </div>
   );
 }

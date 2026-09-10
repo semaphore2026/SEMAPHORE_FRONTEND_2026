@@ -195,9 +195,9 @@ export default function MemoriesPage() {
         {/* Badge */}
         <div className="inline-flex items-center space-x-2 px-4 py-1.5 rounded-full bg-black/50 border border-cyan-500/30 text-cyan-300 text-[10px] sm:text-xs font-mono tracking-[0.25em] uppercase mb-4">
           <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
-          <span>AQUASAGA 2026 // VISUAL VAULT</span>
+          <span>AQUASAGA 2026</span>
         </div>
-
+ 
         {/* Main Title */}
         <h1 className="text-4xl sm:text-6xl md:text-7xl font-black tracking-[0.15em] uppercase text-transparent bg-clip-text bg-gradient-to-br from-white via-cyan-200 to-blue-500 mb-4">
           MEMORIES
