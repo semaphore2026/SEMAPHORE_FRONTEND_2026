@@ -221,6 +221,10 @@ if (list.length > 0) setCollegeName(list[0]);
               )}
             </div>
 
+            <div className="text-center text-xs font-medium text-gray-400 mt-2">
+            Facing any issue in registration? <a href="/contact" className="text-cyan-400 hover:text-cyan-300 hover:underline transition-colors font-bold">Contact Us</a>
+          </div>
+
             <div className="w-full flex justify-between items-center text-[9px] font-mono tracking-widest text-slate-400 pt-6 border-t border-cyan-500/20 uppercase mt-4">
               <span>DEPTH: SIGN-IN</span>
               <span className="flex items-center space-x-1.5">
