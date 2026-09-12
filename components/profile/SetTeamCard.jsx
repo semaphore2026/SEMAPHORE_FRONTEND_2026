@@ -39,8 +39,12 @@ export default function SetTeamCard({ user, onUserUpdate }) {
         throw new Error("Authorization token not found. Please log in again.");
       }
 
-      const response = await fetch(`${API_BASE_URL}/api/teams/set-team`, {
-        method: "POST",
+      const isUpdate = !!existingTeamName;
+      const endpoint = isUpdate ? '/api/teams/update-name' : '/api/teams/set-team';
+      const method = isUpdate ? 'PUT' : 'POST';
+
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        method: method,
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
@@ -108,10 +112,25 @@ export default function SetTeamCard({ user, onUserUpdate }) {
       )}
 
       {existingTeamName && !isEditing ? (
-        <div className="bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 relative group">
           <div>
             <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider block mb-0.5">Active Team</span>
-            <span className="text-lg font-extrabold text-white">{existingTeamName}</span>
+            <div className="flex items-center gap-3">
+              <span className="text-lg font-extrabold text-white">{existingTeamName}</span>
+              <button 
+                onClick={() => {
+                  setTeamName(existingTeamName);
+                  setIsEditing(true);
+                  setError(null);
+                  setSuccess(null);
+                }}
+                className="text-[10px] uppercase font-bold text-cyan-400 hover:text-white px-3 py-1.5 bg-cyan-500/10 hover:bg-cyan-500/30 rounded-lg transition-all flex items-center gap-1.5 shrink-0"
+                title="Edit Team Name"
+              >
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                <span>Edit</span>
+              </button>
+            </div>
           </div>
           {existingTeamId && (
             <div className="bg-cyan-500/10 border border-cyan-500/30 px-3 py-1.5 rounded-xl self-start sm:self-auto">

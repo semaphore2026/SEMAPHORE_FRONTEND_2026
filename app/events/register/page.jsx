@@ -31,12 +31,12 @@ const pageCss = `
      its neighbour and visibly jump down under the cursor. */
   .reg-grid {
     display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 20px; align-items: stretch; grid-auto-rows: 1fr;
+    gap: 20px; align-items: stretch; grid-auto-rows: auto;
   }
   /* An open card is legitimately far taller than the rest. Matching heights then
      would balloon every card in its row to the height of the form, so uniform
      heights are dropped for exactly as long as a form is open. */
-  .reg-grid.is-open { align-items: start; grid-auto-rows: auto; }
+  .reg-grid.is-open { align-items: start; }
 
   /* ---------- Progress stepper ----------
      One pip per selectable event. At zero a single flat bar just reads as a
@@ -184,6 +184,87 @@ export default function EventsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [globalError, setGlobalError] = useState(null);
   const [globalSuccess, setGlobalSuccess] = useState(null);
+
+  // Inline Edit Participants State
+  const [editingRegId, setEditingRegId] = useState(null);
+  const [editingParticipants, setEditingParticipants] = useState([]);
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError] = useState(null);
+  const [editSuccess, setEditSuccess] = useState(null);
+
+  const handleSaveParticipants = async (regId, eventId) => {
+    if (!editingParticipants || editingParticipants.length === 0) {
+      setEditError('At least one participant is required.');
+      return;
+    }
+    
+    // Clean up empty names
+    const cleanedParticipants = editingParticipants
+      .filter(p => p.name && p.name.trim() !== '')
+      .map(p => ({
+        name: p.name.trim(),
+        phone: p.phone ? normalizePhone(p.phone) : ''
+      }));
+
+    if (cleanedParticipants.length === 0) {
+      setEditError('Participant name cannot be empty.');
+      return;
+    }
+    
+    // Find event object to validate min/max participants
+    const eventObj = events.find(e => (e._id === eventId || e.id === eventId));
+    if (eventObj) {
+      if (cleanedParticipants.length < eventObj.minParticipants) {
+        setEditError(`This event requires at least ${eventObj.minParticipants} participants.`);
+        return;
+      }
+      if (cleanedParticipants.length > eventObj.maxParticipants) {
+        setEditError(`This event allows a maximum of ${eventObj.maxParticipants} participants.`);
+        return;
+      }
+    }
+
+    setEditLoading(true);
+    setEditError(null);
+    setEditSuccess(null);
+    
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API_BASE_URL}/api/registrations/${regId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ participants: cleanedParticipants })
+      });
+      const data = await res.json();
+      
+      if (res.ok) {
+        setEditSuccess('Participants updated successfully!');
+        // Update local state without reload
+        setRegisteredEventMap(prev => {
+          const nextMap = { ...prev };
+          const evId = typeof eventId === 'object' ? (eventId._id || eventId.id) : eventId;
+          if (nextMap[evId] && nextMap[evId].registration) {
+             nextMap[evId].registration.participants = data.registration?.participants || cleanedParticipants;
+          }
+          return nextMap;
+        });
+        
+        setTimeout(() => {
+          setEditingRegId(null);
+          setEditSuccess(null);
+        }, 1500);
+      } else {
+        setEditError(data.message || 'Failed to update participants.');
+      }
+    } catch (err) {
+      setEditError(err.message || 'An error occurred.');
+    } finally {
+      setEditLoading(false);
+    }
+  };
 
   const handleSetTeam = async (e) => {
     if (e) e.preventDefault();
@@ -798,33 +879,150 @@ export default function EventsPage() {
                           </div>
 
                           {isRegistered ? (
-                            pStatus === 'approved' ? (
-                              <button disabled style={{ ...styles.actionBtn, background: 'rgba(16,185,129,0.18)', color: '#6ee7b7', border: '1px solid rgba(16,185,129,0.35)', cursor: 'not-allowed' }}>
-                                ✓ Registered &amp; Verified
-                              </button>
-                            ) : pStatus === 'covered' ? (
-                              // The fee is already settled for this team, so this event
-                              // costs nothing extra — never show a payment button here.
-                              <button disabled style={{ ...styles.actionBtn, background: 'rgba(16,185,129,0.18)', color: '#6ee7b7', border: '1px solid rgba(16,185,129,0.35)', cursor: 'not-allowed' }}>
-                                ✓ Registered — Fee Already Paid
-                              </button>
-                            ) : pStatus === 'pending' ? (
-                              <button disabled style={{ ...styles.actionBtn, background: 'rgba(245,158,11,0.18)', color: '#fcd34d', border: '1px solid rgba(245,158,11,0.35)', cursor: 'not-allowed' }}>
-                                ⏳ Payment Verification Pending
-                              </button>
-                            ) : (
-                              <button
-                                className="reg-btn"
-                                onClick={() => {
-                                  sessionStorage.setItem('pendingPaymentAmount', TEAM_REGISTRATION_FEE);
-                                  sessionStorage.setItem('pendingEventIds', JSON.stringify([event._id]));
-                                  router.push('/user/account/payment');
-                                }}
-                                style={{ ...styles.actionBtn, background: 'linear-gradient(135deg, #f59e0b, #d97706)' }}
-                              >
-                                Complete Payment (₹{TEAM_REGISTRATION_FEE})
-                              </button>
-                            )
+                            <div className="flex flex-col gap-3">
+                              {/* Registered Participants & Edit Button */}
+                              {(() => {
+                                const regData = eventRegInfo?.registration;
+                                const participantsList = regData?.participants || [];
+                                
+                                return (
+                                  <div className="pt-2 border-t border-white/10 flex flex-col gap-1.5 mt-2">
+                                    <div className="flex items-center justify-between mb-1">
+                                      <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+                                        Registered Participants ({participantsList.length}):
+                                      </span>
+                                      {regData && editingRegId !== regData._id && (
+                                        <button 
+                                          onClick={() => {
+                                            setEditingRegId(regData._id);
+                                            setEditingParticipants(JSON.parse(JSON.stringify(participantsList)));
+                                            setEditError(null);
+                                            setEditSuccess(null);
+                                          }}
+                                          className="text-[10px] uppercase font-bold text-cyan-400 hover:text-white px-3 py-1.5 bg-cyan-500/10 hover:bg-cyan-500/30 rounded-lg transition-all flex items-center gap-1.5 shadow-sm border border-cyan-500/20"
+                                        >
+                                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                                          <span>Edit</span>
+                                        </button>
+                                      )}
+                                    </div>
+                                    
+                                    {regData && editingRegId === regData._id ? (
+                                      <div className="flex flex-col gap-4 w-full bg-black/40 backdrop-blur-md p-4 rounded-xl border border-white/10 shadow-inner mt-2">
+                                        {editError && (
+                                          <div className="text-xs text-red-400 bg-red-500/10 p-2.5 rounded-lg border border-red-500/20 flex items-center gap-2">
+                                            <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                            {editError}
+                                          </div>
+                                        )}
+                                        {editSuccess && (
+                                          <div className="text-xs text-green-400 bg-green-500/10 p-2.5 rounded-lg border border-green-500/20 flex items-center gap-2">
+                                            <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                            {editSuccess}
+                                          </div>
+                                        )}
+                                        
+                                        <div className="space-y-3">
+                                          {editingParticipants.map((p, pIdx) => (
+                                            <div key={pIdx} className="flex gap-2 items-center bg-white/5 p-2 rounded-lg border border-white/5">
+                                              <div className="flex-1 space-y-2">
+                                                <input 
+                                                  className="w-full bg-black/30 border border-white/10 rounded-md px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500/50 focus:bg-white/5 transition-all placeholder-gray-500 font-medium" 
+                                                  value={p.name || ''} 
+                                                  onChange={e => {
+                                                    const newP = [...editingParticipants];
+                                                    newP[pIdx].name = e.target.value;
+                                                    setEditingParticipants(newP);
+                                                  }}
+                                                  placeholder="Participant Name"
+                                                />
+                                                <input 
+                                                  className="w-full bg-black/30 border border-white/10 rounded-md px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-500/50 focus:bg-white/5 transition-all placeholder-gray-500 font-medium" 
+                                                  value={p.phone || ''} 
+                                                  onChange={e => {
+                                                    const newP = [...editingParticipants];
+                                                    newP[pIdx].phone = e.target.value;
+                                                    setEditingParticipants(newP);
+                                                  }}
+                                                  placeholder="Phone Number (Optional)"
+                                                />
+                                              </div>
+                                            </div>
+                                          ))}
+                                        </div>
+                                        
+                                        <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-white/10">
+                                          {editingParticipants.length < (event.maxParticipants || 10) ? (
+                                            <button 
+                                              onClick={() => setEditingParticipants([...editingParticipants, { name: '', phone: '' }])}
+                                              className="text-[11px] uppercase tracking-wider font-bold text-gray-300 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 px-4 py-2 rounded-lg transition-all flex items-center gap-1.5"
+                                            >
+                                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
+                                              Add Member
+                                            </button>
+                                          ) : (
+                                            <span className="text-[10px] text-gray-500 font-medium italic">Max limit reached</span>
+                                          )}
+                                          
+                                          <div className="flex gap-2 w-full sm:w-auto">
+                                            <button 
+                                              onClick={() => setEditingRegId(null)}
+                                              className="flex-1 sm:flex-none text-[11px] uppercase tracking-wider font-bold text-gray-400 hover:text-white px-5 py-2.5 rounded-lg transition-all border border-transparent hover:border-white/10"
+                                            >
+                                              Cancel
+                                            </button>
+                                            <button 
+                                              onClick={() => handleSaveParticipants(regData._id, event._id)}
+                                              disabled={editLoading}
+                                              className="flex-1 sm:flex-none text-[11px] uppercase tracking-wider font-extrabold text-black bg-cyan-400 hover:bg-cyan-300 px-6 py-2.5 rounded-lg transition-all shadow-[0_0_15px_rgba(34,211,238,0.3)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                            >
+                                              {editLoading && <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>}
+                                              {editLoading ? 'Saving' : 'Save Changes'}
+                                            </button>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <div className="flex flex-wrap gap-1.5 mt-1">
+                                        {participantsList.map((p, idx) => (
+                                          <span key={idx} className="bg-white/5 border border-white/10 px-2 py-1 rounded text-[10px] text-gray-300 flex items-center gap-1">
+                                            <svg className="w-2.5 h-2.5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                                            {p.name}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })()}
+
+                              {/* Payment Status Button */}
+                              {pStatus === 'approved' ? (
+                                <button disabled style={{ ...styles.actionBtn, background: 'rgba(16,185,129,0.18)', color: '#6ee7b7', border: '1px solid rgba(16,185,129,0.35)', cursor: 'not-allowed' }}>
+                                  ✓ Registered &amp; Verified
+                                </button>
+                              ) : pStatus === 'covered' ? (
+                                <button disabled style={{ ...styles.actionBtn, background: 'rgba(16,185,129,0.18)', color: '#6ee7b7', border: '1px solid rgba(16,185,129,0.35)', cursor: 'not-allowed' }}>
+                                  ✓ Registered — Fee Already Paid
+                                </button>
+                              ) : pStatus === 'pending' ? (
+                                <button disabled style={{ ...styles.actionBtn, background: 'rgba(245,158,11,0.18)', color: '#fcd34d', border: '1px solid rgba(245,158,11,0.35)', cursor: 'not-allowed' }}>
+                                  ⏳ Payment Verification Pending
+                                </button>
+                              ) : (
+                                <button
+                                  className="reg-btn"
+                                  onClick={() => {
+                                    sessionStorage.setItem('pendingPaymentAmount', TEAM_REGISTRATION_FEE);
+                                    sessionStorage.setItem('pendingEventIds', JSON.stringify([event._id]));
+                                    router.push('/user/account/payment');
+                                  }}
+                                  style={{ ...styles.actionBtn, background: 'linear-gradient(135deg, #f59e0b, #d97706)' }}
+                                >
+                                  Complete Payment (₹{TEAM_REGISTRATION_FEE})
+                                </button>
+                              )}
+                            </div>
                           ) : !isExpanded ? (
                             <button
                               className="reg-btn"

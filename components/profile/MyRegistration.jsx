@@ -93,6 +93,8 @@ export default function MyRegistration({ user: initialUser }) {
     fetchVerifiedUserData();
   }, []);
 
+
+
   // Helper to extract clean payment info from a registration item
   const getPaymentInfo = (item) => {
     if (!item) return null;
@@ -201,18 +203,14 @@ export default function MyRegistration({ user: initialUser }) {
         <h1 className="text-xl md:text-2xl font-extrabold text-white tracking-wide">
           Events Registered ({events.length})
         </h1>
-        {teamNameStr && (
-          <div className="inline-flex items-center gap-2 bg-black/60 backdrop-blur-md border border-cyan-500/30 px-3.5 py-1.5 rounded-2xl text-xs font-bold text-cyan-400 shadow-sm">
-            <svg className="w-4 h-4 text-cyan-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>
-            <span>Team: {teamNameStr}</span>
-            {teamCodeStr && (
-              <span className="text-[10px] font-mono text-cyan-300 bg-cyan-500/10 px-1.5 py-0.5 rounded border border-cyan-500/30">
-                {teamCodeStr}
-              </span>
-            )}
-          </div>
+        {events.length > 0 && (
+          <button 
+            onClick={() => router.push('/events/register')}
+            className="shrink-0 bg-cyan-500 hover:bg-cyan-400 text-black font-extrabold text-[11px] uppercase tracking-wider px-4 py-2 rounded-xl transition-all shadow-[0_0_15px_rgba(34,211,238,0.3)] flex items-center gap-2"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+            Edit Participants
+          </button>
         )}
       </div>
 
@@ -368,28 +366,31 @@ export default function MyRegistration({ user: initialUser }) {
                     {/* Participants list */}
                     {Array.isArray(participants) && participants.length > 0 && (
                       <div className="pt-2 border-t border-white/10 flex flex-col gap-1.5">
-                        <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
-                          Registered Participants ({participants.length}):
-                        </span>
-                        <div className="flex flex-col gap-2 w-fit">
-                          {participants.map((p, pIdx) => (
-                            <div key={pIdx} className="flex flex-wrap items-center gap-3 text-xs bg-white/5 border border-white/10 text-gray-300 px-4 py-2.5 rounded-lg font-medium">
-                              <div className="flex items-center gap-1.5">
-                                <User className="text-cyan-400/80 w-3 h-3" />
-                                <span>{p.name || `Participant ${pIdx + 1}`}</span>
-                              </div>
-                              {p.phone && (
-                                <>
-                                  <span className="text-white/20 hidden sm:inline">•</span>
-                                  <div className="flex items-center gap-1.5 text-gray-400">
-                                    <Phone className="text-pink-400/80 w-3 h-3" />
-                                    <span>{p.phone}</span>
-                                  </div>
-                                </>
-                              )}
-                            </div>
-                          ))}
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+                            Registered Participants ({participants.length}):
+                          </span>
                         </div>
+                        
+                        <div className="flex flex-col gap-2 w-fit">
+                            {participants.map((p, pIdx) => (
+                              <div key={pIdx} className="flex flex-wrap items-center gap-3 text-xs bg-white/5 border border-white/10 text-gray-300 px-4 py-2.5 rounded-lg font-medium">
+                                <div className="flex items-center gap-1.5">
+                                  <User className="text-cyan-400/80 w-3 h-3" />
+                                  <span>{p.name || `Participant ${pIdx + 1}`}</span>
+                                </div>
+                                {p.phone && (
+                                  <>
+                                    <span className="text-white/20 hidden sm:inline">•</span>
+                                    <div className="flex items-center gap-1.5 text-gray-400">
+                                      <Phone className="text-pink-400/80 w-3 h-3" />
+                                      <span>{p.phone}</span>
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            ))}
+                          </div>
                       </div>
                     )}
                   </div>
